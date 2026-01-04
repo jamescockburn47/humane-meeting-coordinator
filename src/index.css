@@ -781,6 +781,73 @@ label {
   color: white;
 }
 
+/* --- World Clock --- */
+.world-clock-card {
+  padding: 1rem !important;
+}
+
+.world-clock-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+@media (min-width: 1200px) {
+  .world-clock-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.clock-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border-left: 2px solid var(--border);
+  transition: all var(--transition-fast);
+}
+
+.clock-item.work-hours {
+  border-left-color: var(--primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.clock-item.night {
+  opacity: 0.5;
+}
+
+.clock-emoji {
+  font-size: 0.9rem;
+}
+
+.clock-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.clock-city {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clock-time {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-main);
+}
+
+.clock-item.night .clock-time {
+  color: var(--text-muted);
+}
+
 .join-options {
   text-align: center;
 }
