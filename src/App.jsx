@@ -188,16 +188,31 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    if (activeAccount?.provider === 'microsoft') {
-      instance.logoutPopup();
-    }
+  const handleLogout = async () => {
+    const provider = activeAccount?.provider;
+    
+    // Clear local state first
     localStorage.removeItem('guestEmail');
     setActiveAccount(null);
     setGoogleAccessToken(null);
     setCalendarConnected(false);
     setGroups([]);
     setMyBusySlots([]);
+    
+    // Provider-specific logout
+    if (provider === 'microsoft') {
+      try {
+        await instance.logoutPopup();
+      } catch (e) {
+        console.log("Microsoft logout:", e);
+      }
+    } else if (provider === 'google') {
+      // Google OAuth tokens are session-only, just clearing state is enough
+      // Optionally revoke token:
+      // google.accounts.oauth2.revoke(googleAccessToken);
+      console.log("Google session cleared");
+    }
+    // Guest logout just clears local state (already done above)
   };
 
   // Fetch user's busy slots for calendar overlay

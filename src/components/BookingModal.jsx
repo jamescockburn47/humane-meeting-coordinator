@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { downloadICS } from '../services/ical';
 
-export function BookingModal({ slot, members, onConfirm, onCancel, processing, hostProvider }) {
+export function BookingModal({ slot, members, onConfirm, onCancel, processing, hostProvider, hostEmail, hostName }) {
     const [subject, setSubject] = useState("Team Sync");
     const [description, setDescription] = useState("");
 
@@ -112,21 +113,54 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
                         >
                             Cancel
                         </button>
+                        
+                        {/* Apple Calendar / Download .ics option */}
                         <button 
-                            type="submit" 
-                            className="btn-primary send-btn" 
+                            type="button" 
+                            className="btn-ghost apple-btn"
+                            onClick={() => {
+                                const memberEmails = members.map(m => m.email);
+                                downloadICS(
+                                    subject,
+                                    description,
+                                    slot.start,
+                                    slot.end,
+                                    memberEmails,
+                                    hostEmail || 'organizer@humanecalendar.com',
+                                    hostName || 'Organizer'
+                                );
+                            }}
                             disabled={processing}
+                            title="Download .ics file for Apple Calendar or other apps"
                         >
-                            {processing ? (
-                                <>
-                                    <span className="spinner"></span>
-                                    Sending Invites...
-                                </>
-                            ) : (
-                                <>📤 Send Invites</>
-                            )}
+                            🍎 Download .ics
                         </button>
+
+                        {/* Google/Microsoft send invites */}
+                        {(hostProvider === 'google' || hostProvider === 'microsoft') && (
+                            <button 
+                                type="submit" 
+                                className="btn-primary send-btn" 
+                                disabled={processing}
+                            >
+                                {processing ? (
+                                    <>
+                                        <span className="spinner"></span>
+                                        Sending...
+                                    </>
+                                ) : (
+                                    <>📤 Send Invites</>
+                                )}
+                            </button>
+                        )}
                     </div>
+
+                    {hostProvider === 'guest' && (
+                        <div className="guest-booking-note">
+                            <span>💡</span>
+                            <span>As a guest, download the .ics file and share it with attendees, or connect your Google/Microsoft calendar to send invites directly.</span>
+                        </div>
+                    )}
                 </form>
             </div>
         </div>

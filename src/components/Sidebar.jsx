@@ -17,6 +17,17 @@ export function Sidebar({
 }) {
     const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'GU';
 
+    const getProviderLabel = (provider) => {
+        switch (provider) {
+            case 'microsoft': return { icon: '🔵', name: 'Microsoft', color: '#0078d4' };
+            case 'google': return { icon: '🔴', name: 'Google', color: '#ea4335' };
+            case 'guest': return { icon: '👤', name: 'Guest', color: 'var(--text-muted)' };
+            default: return { icon: '👤', name: 'User', color: 'var(--text-muted)' };
+        }
+    };
+
+    const providerInfo = user ? getProviderLabel(user.provider) : null;
+
     return (
         <div className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
             <div className="brand" style={{ justifyContent: 'center', marginBottom: '2rem' }}>
@@ -41,66 +52,76 @@ export function Sidebar({
             <div className="user-profile">
                 {user ? (
                     <>
-                        <div className="avatar">{getInitials(user.name)}</div>
+                        <div className="avatar" style={{ borderColor: providerInfo.color }}>
+                            {getInitials(user.name)}
+                        </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>
                                 {user.name}
                             </div>
+                            
+                            {/* Provider Badge */}
+                            <div className="provider-badge" style={{ borderColor: providerInfo.color }}>
+                                <span>{providerInfo.icon}</span>
+                                <span>{providerInfo.name}</span>
+                            </div>
+
+                            {/* Calendar Status */}
                             {user.provider === 'guest' && !calendarConnected ? (
                                 <div className="connect-calendar-section">
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                        Guest Mode
-                                    </span>
-                                    <div className="connect-buttons">
+                                    <div className="connect-buttons" style={{ marginTop: '0.5rem' }}>
                                         <button 
                                             onClick={() => onConnectCalendar('microsoft')} 
                                             className="btn-connect"
                                             title="Connect Microsoft Calendar"
                                         >
-                                            📅 MS
+                                            🔵 MS
                                         </button>
                                         <button 
                                             onClick={() => onConnectCalendar('google')} 
                                             className="btn-connect"
                                             title="Connect Google Calendar"
                                         >
-                                            📅 G
+                                            🔴 G
                                         </button>
                                     </div>
                                 </div>
-                            ) : (
+                            ) : calendarConnected ? (
                                 <div
+                                    className="sync-status"
                                     style={{ 
-                                        fontSize: '0.75rem', 
                                         color: syncStatus === 'Synced!' ? 'var(--primary)' : 'var(--text-muted)', 
-                                        cursor: calendarConnected ? 'pointer' : 'default', 
-                                        fontFamily: 'var(--font-sans)' 
+                                        cursor: 'pointer'
                                     }}
-                                    onClick={calendarConnected ? onSync : undefined}
+                                    onClick={onSync}
                                 >
-                                    {calendarConnected 
-                                        ? (syncStatus === 'Idle' ? '✓ Calendar Connected' : syncStatus)
-                                        : 'Manual Availability'
-                                    }
+                                    {syncStatus === 'Idle' ? '✓ Calendar synced' : syncStatus}
                                 </div>
-                            )}
+                            ) : null}
                         </div>
-                        <button onClick={onLogout} className="btn-ghost logout-btn" title="Logout">
+                        <button 
+                            onClick={onLogout} 
+                            className="btn-ghost logout-btn" 
+                            title={`Sign out of ${providerInfo.name}`}
+                        >
                             ✕
                         </button>
                     </>
                 ) : (
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <button onClick={onLoginMS} className="btn-primary" style={{ fontSize: '0.8rem', padding: '0.5rem' }}>
-                            Sign in (Microsoft)
+                        <button onClick={onLoginMS} className="btn-login btn-microsoft">
+                            <span className="login-icon">🔵</span>
+                            Sign in with Microsoft
                         </button>
-                        <button onClick={onLoginGoogle} className="btn-ghost" style={{ fontSize: '0.8rem', padding: '0.5rem', border: '1px solid var(--border)' }}>
-                            Sign in (Google)
+                        <button onClick={onLoginGoogle} className="btn-login btn-google">
+                            <span className="login-icon">🔴</span>
+                            Sign in with Google
                         </button>
                         <div className="divider-text">
                             <span>or</span>
                         </div>
-                        <button onClick={onGuestJoin} className="btn-ghost guest-btn" style={{ fontSize: '0.8rem', padding: '0.5rem' }}>
+                        <button onClick={onGuestJoin} className="btn-ghost guest-btn">
+                            <span className="login-icon">👤</span>
                             Join as Guest
                         </button>
                     </div>

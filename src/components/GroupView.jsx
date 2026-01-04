@@ -49,6 +49,8 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     slot={bookingSlot}
                     members={members}
                     hostProvider={currentUser?.provider}
+                    hostEmail={currentUser?.username}
+                    hostName={currentUser?.name}
                     processing={bookingProcessing}
                     onConfirm={async (subj, desc) => {
                         setBookingProcessing(true);

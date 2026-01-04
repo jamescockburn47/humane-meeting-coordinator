@@ -585,6 +585,28 @@ label {
   gap: 0.5rem;
 }
 
+.apple-btn {
+  border: 1px solid #555 !important;
+  padding: 0.5rem 1rem !important;
+}
+
+.apple-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.guest-booking-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 .spinner {
   width: 16px;
   height: 16px;
@@ -938,10 +960,76 @@ label {
 
 .guest-btn {
   border: 1px dashed var(--border) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.5rem;
 }
 
 .guest-btn:hover {
   border-color: var(--primary) !important;
+}
+
+/* --- Login Buttons --- */
+.btn-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
+.btn-login:hover {
+  background: var(--bg-hover);
+}
+
+.btn-microsoft {
+  border-color: #0078d4;
+}
+
+.btn-microsoft:hover {
+  background: rgba(0, 120, 212, 0.15);
+}
+
+.btn-google {
+  border-color: #ea4335;
+}
+
+.btn-google:hover {
+  background: rgba(234, 67, 53, 0.15);
+}
+
+.login-icon {
+  font-size: 1rem;
+}
+
+/* --- Provider Badge --- */
+.provider-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.sync-status {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  font-family: var(--font-sans);
 }
 
 .connect-calendar-section {
