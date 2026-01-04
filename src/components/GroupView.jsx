@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookingModal } from './BookingModal';
-import { getGroupMembers, removeMember, makeAdmin, getGroupDetails } from '../services/supabase';
+import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup } from '../services/supabase';
 
 // Invite Link Card Component - Focused on sharing links, not codes
 function InviteLinkCard({ groupName, inviteCode, groupId }) {
@@ -90,7 +90,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId }) {
     );
 }
 
-export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook }) {
+export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook, onDeleteGroup }) {
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]);
     const [bookingSlot, setBookingSlot] = useState(null);
@@ -122,6 +122,19 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
         if (!confirm(`Promote ${email} to Admin?`)) return;
         await makeAdmin(group.id, email);
         setRefreshTrigger(p => p + 1);
+    };
+
+    const handleDeleteGroup = async () => {
+        if (!confirm(`Are you sure you want to DELETE the group "${group.name}"?\n\nThis cannot be undone.`)) return;
+        if (!confirm(`FINAL WARNING: All members will be removed and this group will be permanently deleted.`)) return;
+        
+        const { error } = await deleteGroup(group.id);
+        if (error) {
+            alert('Failed to delete group: ' + error.message);
+        } else {
+            alert('Group deleted successfully.');
+            if (onDeleteGroup) onDeleteGroup(group.id);
+        }
     };
 
     // Determine if Current User is Admin or Creator
@@ -161,6 +174,15 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     <h2 style={{ margin: 0 }}>{fullGroupDetails?.name || group.name}</h2>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {group.id}</div>
                 </div>
+                {canManage && (
+                    <button 
+                        onClick={handleDeleteGroup} 
+                        className="btn-danger"
+                        title="Delete this group"
+                    >
+                        🗑️ Delete Group
+                    </button>
+                )}
             </div>
 
             <div className="grid-cols-2" style={{ gap: '2rem', marginBottom: '2rem' }}>

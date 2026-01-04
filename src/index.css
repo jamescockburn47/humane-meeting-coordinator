@@ -765,6 +765,22 @@ label {
   border-color: var(--primary);
 }
 
+.btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger:hover {
+  background: #ef4444;
+  color: white;
+}
+
 .join-options {
   text-align: center;
 }

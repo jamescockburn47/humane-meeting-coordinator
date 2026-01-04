@@ -826,6 +826,11 @@ function App() {
             suggestions={suggestions}
             loading={loading}
             onBook={handleBookMeeting}
+            onDeleteGroup={(groupId) => {
+              setGroups(prev => prev.filter(g => g.id !== groupId));
+              setSelectedGroup(null);
+              setView('dashboard');
+            }}
           />
         )}
 

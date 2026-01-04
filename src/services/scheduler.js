@@ -9,10 +9,6 @@ import { addMinutes } from 'date-fns';
  * 2. Don't overlap with any member's busy times
  */
 export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEndStr, durationMinutes) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4dc5cdbe-3266-4cd2-814b-44e3842cd6c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scheduler.js:findCommonHumaneSlots:entry',message:'Scheduler called',data:{memberCount:members.length,members:members.map(m=>({email:m?.email,timezone:m?.timezone,humane_windows:m?.humane_windows,humane_start_local:m?.humane_start_local,humane_end_local:m?.humane_end_local})),busySlotsCount:busySlots.length,rangeStart:rangeStartStr,rangeEnd:rangeEndStr},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H4,H5'})}).catch(()=>{});
-    // #endregion
-
     console.log("=== SCHEDULER DEBUG ===");
     console.log("Range:", rangeStartStr, "to", rangeEndStr);
     console.log("Duration:", durationMinutes, "minutes");
@@ -130,15 +126,6 @@ function isHumane(startUtc, endUtc, member) {
 
     // Check Multi-Window Logic
     const windows = member.humane_windows;
-    
-    // Log first few checks only to avoid spam
-    if (!isHumane._logCount) isHumane._logCount = 0;
-    if (isHumane._logCount < 5) {
-        isHumane._logCount++;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/4dc5cdbe-3266-4cd2-814b-44e3842cd6c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'scheduler.js:isHumane:check',message:'isHumane check',data:{email:member.email,zone,startHour:startHour.toFixed(2),endHour:endHour.toFixed(2),day,windowsIsArray:Array.isArray(windows),windowsLength:windows?.length,windows,usingLegacy:!windows||!Array.isArray(windows)||windows.length===0},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4,H5'})}).catch(()=>{});
-        // #endregion
-    }
     
     if (windows && Array.isArray(windows) && windows.length > 0) {
         for (const win of windows) {

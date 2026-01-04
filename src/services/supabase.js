@@ -11,10 +11,6 @@ export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
  * Upserts a user profile.
  */
 export async function updateProfile(email, name, timezone, startLocal, endLocal, windows = []) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4dc5cdbe-3266-4cd2-814b-44e3842cd6c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabase.js:updateProfile:entry',message:'updateProfile called',data:{email,name,timezone,startLocal,endLocal,windows},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2'})}).catch(()=>{});
-    // #endregion
-    
     const { data, error } = await supabase
         .from('profiles')
         .upsert({
@@ -27,10 +23,6 @@ export async function updateProfile(email, name, timezone, startLocal, endLocal,
             last_synced_at: new Date().toISOString()
         }, { onConflict: 'email' })
         .select();
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4dc5cdbe-3266-4cd2-814b-44e3842cd6c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabase.js:updateProfile:result',message:'updateProfile result',data:{success:!error,error:error?.message,data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H2'})}).catch(()=>{});
-    // #endregion
 
     if (error) console.error("Profile update failed", error);
     return data;
@@ -215,10 +207,6 @@ export async function syncAvailability(email, busySlots) {
  * Fetches group members and their operational windows.
  */
 export async function getGroupMembers(groupId) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4dc5cdbe-3266-4cd2-814b-44e3842cd6c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabase.js:getGroupMembers:entry',message:'getGroupMembers called',data:{groupId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
-
     const { data, error } = await supabase
         .from('group_members')
         .select(`
@@ -235,18 +223,9 @@ export async function getGroupMembers(groupId) {
         `)
         .eq('group_id', groupId);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4dc5cdbe-3266-4cd2-814b-44e3842cd6c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabase.js:getGroupMembers:result',message:'getGroupMembers result',data:{error:error?.message,rawData:data,memberCount:data?.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H5'})}).catch(()=>{});
-    // #endregion
-
     if (error) return [];
     // Merge is_admin into the profile object for easier consumption
     const members = data.map(d => ({ ...d.profiles, is_admin: d.is_admin }));
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/4dc5cdbe-3266-4cd2-814b-44e3842cd6c9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabase.js:getGroupMembers:mapped',message:'Members after mapping',data:{members:members.map(m=>({email:m?.email,hasWindows:!!m?.humane_windows,windowsLength:m?.humane_windows?.length,timezone:m?.timezone}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3,H5'})}).catch(()=>{});
-    // #endregion
-
     return members;
 }
 
@@ -256,6 +235,25 @@ export async function removeMember(groupId, email) {
         .delete()
         .eq('group_id', groupId)
         .eq('profile_email', email);
+    return { error };
+}
+
+/**
+ * Deletes a group and all its memberships (CASCADE should handle members)
+ */
+export async function deleteGroup(groupId) {
+    // First delete all memberships
+    await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId);
+
+    // Then delete the group
+    const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', groupId);
+
     return { error };
 }
 
