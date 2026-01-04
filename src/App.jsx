@@ -301,13 +301,24 @@ function App() {
   };
 
   const handleBookMeeting = async (groupId, slot, subject, description) => {
-    if (!activeAccount) { alert("Please sign in to book a meeting."); return; }
-    if (!checkOrganiserAccess()) return;
+    if (!activeAccount) { 
+      alert("Please sign in to book a meeting."); 
+      throw new Error("Not signed in");
+    }
+    
+    // Guests without calendar integration can't send invites
+    if (activeAccount.provider === 'guest' && !calendarConnected) {
+      alert("To send calendar invites, please connect your Google or Microsoft calendar first.");
+      throw new Error("Calendar not connected");
+    }
+    
+    if (!checkOrganiserAccess()) {
+      throw new Error("Not authorized");
+    }
 
-    setLoading(true);
     try {
       const members = await getGroupMembers(groupId);
-      const memberEmails = members.map(m => m.email); // .filter(e => e !== activeAccount.username) ?
+      const memberEmails = members.map(m => m.email);
 
       if (activeAccount.provider === 'google') {
         await createGoogleEvent(
@@ -318,9 +329,13 @@ function App() {
           slot.end,
           memberEmails
         );
-      } else {
+      } else if (activeAccount.provider === 'microsoft') {
+        const tokenResponse = await instance.acquireTokenSilent({ 
+          ...loginRequest, 
+          account: accounts[0] 
+        });
         await createMeeting(
-          await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount }).then(res => res.accessToken),
+          tokenResponse.accessToken,
           subject,
           description,
           slot.start,
@@ -329,13 +344,12 @@ function App() {
         );
       }
 
-      alert("Meeting Booked! Check your Calendar.");
+      alert("✅ Meeting invites sent! All attendees will receive a calendar invitation.");
       setSuggestions([]);
     } catch (e) {
-      console.error(e);
+      console.error("Booking error:", e);
       alert("Booking Failed: " + e.message);
-    } finally {
-      setLoading(false);
+      throw e;
     }
   };
 

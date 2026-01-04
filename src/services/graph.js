@@ -78,9 +78,14 @@ export async function findMeetingTimes(accessToken, attendees, startDate, endDat
 }
 
 /**
- * Creates a meeting on the user's calendar
+ * Creates a meeting on the user's calendar and sends invites to all attendees.
+ * 
+ * Microsoft Graph automatically sends email invitations when attendees are present.
+ * Setting isOnlineMeeting creates a Teams link automatically.
  */
 export async function createMeeting(accessToken, subject, description, startTime, endTime, attendees) {
+    console.log("Creating Microsoft Event with invites:", subject, "Attendees:", attendees);
+    
     const headers = new Headers();
     const bearer = `Bearer ${accessToken}`;
 
@@ -91,7 +96,7 @@ export async function createMeeting(accessToken, subject, description, startTime
         subject: subject,
         body: {
             contentType: "HTML",
-            content: description
+            content: description || "You've been invited to a meeting scheduled via Humane Calendar."
         },
         start: {
             dateTime: startTime, // ISO String
@@ -107,15 +112,29 @@ export async function createMeeting(accessToken, subject, description, startTime
                 name: email // Graph often resolves name automatically
             },
             type: "required"
-        }))
+        })),
+        // Request responses from attendees
+        responseRequested: true,
+        // Create a Teams meeting link automatically
+        isOnlineMeeting: true,
+        onlineMeetingProvider: "teamsForBusiness",
+        // Allow forwarding
+        allowNewTimeProposals: true
     };
 
-    return fetch("https://graph.microsoft.com/v1.0/me/events", {
+    const response = await fetch("https://graph.microsoft.com/v1.0/me/events", {
         method: "POST",
         headers: headers,
         body: JSON.stringify(event)
-    }).then(response => {
-        if (!response.ok) throw new Error("Booking failed");
-        return response.json();
     });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Microsoft Event Creation Failed:", errorText);
+        throw new Error("Failed to create meeting: " + errorText);
+    }
+
+    const result = await response.json();
+    console.log("Microsoft Event Created:", result.webLink);
+    return result;
 }

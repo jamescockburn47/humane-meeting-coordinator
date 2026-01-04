@@ -49,10 +49,13 @@ export async function fetchGoogleAvailability(accessToken, email, start, end) {
 }
 
 /**
- * Creates an event on the user's primary Google Calendar.
+ * Creates an event on the user's primary Google Calendar and sends invites to all attendees.
+ * 
+ * CRITICAL: The `sendUpdates=all` parameter is what triggers Google to send email invitations.
+ * Without it, the event is created but attendees receive nothing.
  */
 export async function createGoogleEvent(accessToken, subject, description, start, end, attendees) {
-    console.log("Creating Google Event:", subject);
+    console.log("Creating Google Event with invites:", subject, "Attendees:", attendees);
 
     const event = {
         summary: subject,
@@ -65,21 +68,43 @@ export async function createGoogleEvent(accessToken, subject, description, start
             dateTime: end,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
         },
-        attendees: attendees.map(email => ({ email })),
+        attendees: attendees.map(email => ({ 
+            email,
+            responseStatus: 'needsAction' // They need to respond
+        })),
+        guestsCanModify: false,
+        guestsCanInviteOthers: false,
+        guestsCanSeeOtherGuests: true,
+        // Add Google Meet link automatically
+        conferenceData: {
+            createRequest: {
+                requestId: `humane-${Date.now()}`,
+                conferenceSolutionKey: { type: 'hangoutsMeet' }
+            }
+        }
     };
 
-    const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(event)
-    });
+    // CRITICAL: sendUpdates=all sends email invitations to all attendees
+    // conferenceDataVersion=1 enables Google Meet creation
+    const response = await fetch(
+        'https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1',
+        {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(event)
+        }
+    );
 
     if (!response.ok) {
-        throw new Error("Failed to create Google Event: " + await response.text());
+        const errorText = await response.text();
+        console.error("Google Event Creation Failed:", errorText);
+        throw new Error("Failed to create Google Event: " + errorText);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log("Google Event Created:", result.htmlLink);
+    return result;
 }

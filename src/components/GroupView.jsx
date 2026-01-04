@@ -6,6 +6,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]);
     const [bookingSlot, setBookingSlot] = useState(null);
+    const [bookingProcessing, setBookingProcessing] = useState(false);
 
     // Admin State
     const [members, setMembers] = useState([]);
@@ -47,11 +48,20 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                 <BookingModal
                     slot={bookingSlot}
                     members={members}
-                    onConfirm={(subj, desc) => {
-                        onBook(group.id, bookingSlot, subj, desc);
-                        setBookingSlot(null);
+                    hostProvider={currentUser?.provider}
+                    processing={bookingProcessing}
+                    onConfirm={async (subj, desc) => {
+                        setBookingProcessing(true);
+                        try {
+                            await onBook(group.id, bookingSlot, subj, desc);
+                            setBookingSlot(null);
+                        } catch (err) {
+                            console.error(err);
+                        } finally {
+                            setBookingProcessing(false);
+                        }
                     }}
-                    onCancel={() => setBookingSlot(null)}
+                    onCancel={() => !bookingProcessing && setBookingSlot(null)}
                 />
             )}
 
