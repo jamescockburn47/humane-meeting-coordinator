@@ -71,17 +71,31 @@ function App() {
     }
   }, [accounts]);
 
-  // Load guest session from localStorage
+  // Load guest session from Supabase (only email stored in localStorage)
   useEffect(() => {
-    const guestSession = localStorage.getItem('guestSession');
-    if (guestSession && !activeAccount) {
-      const guest = JSON.parse(guestSession);
-      setActiveAccount(guest);
-      if (guest.humane_windows) setHumaneWindows(guest.humane_windows);
-      if (guest.timezone) setTimezone(guest.timezone);
-      fetchMyGroups(guest.username);
+    const guestEmail = localStorage.getItem('guestEmail');
+    if (guestEmail && !activeAccount && accounts.length === 0) {
+      // Fetch full profile from Supabase
+      getProfile(guestEmail).then(profile => {
+        if (profile) {
+          const guestUser = {
+            username: profile.email,
+            name: profile.display_name,
+            provider: 'guest'
+          };
+          setActiveAccount(guestUser);
+          if (profile.humane_windows && profile.humane_windows.length > 0) {
+            setHumaneWindows(profile.humane_windows);
+          }
+          if (profile.timezone) setTimezone(profile.timezone);
+          fetchMyGroups(profile.email);
+        } else {
+          // Profile not found in Supabase, clear local session
+          localStorage.removeItem('guestEmail');
+        }
+      });
     }
-  }, []);
+  }, [accounts]);
 
   const fetchMyGroups = async (email) => {
     // Fetch logic for groups would go here in V2
@@ -124,26 +138,8 @@ function App() {
 
   // Guest login (no calendar integration)
   const handleGuestJoin = async (guestData) => {
-    const guestUser = {
-      username: guestData.email,
-      name: guestData.name,
-      provider: 'guest'
-    };
-
-    // Save to localStorage for persistence
-    localStorage.setItem('guestSession', JSON.stringify({
-      ...guestUser,
-      humane_windows: guestData.windows,
-      timezone: guestData.timezone
-    }));
-
-    setActiveAccount(guestUser);
-    setHumaneWindows(guestData.windows);
-    setTimezone(guestData.timezone);
-    setCalendarConnected(false);
-
-    // Create/update profile in Supabase
-    await updateProfile(
+    // Create/update profile in Supabase FIRST
+    const profile = await updateProfile(
       guestData.email,
       guestData.name,
       guestData.timezone,
@@ -152,12 +148,31 @@ function App() {
       guestData.windows
     );
 
+    if (!profile) {
+      alert("Failed to create profile. Please try again.");
+      return;
+    }
+
+    const guestUser = {
+      username: guestData.email,
+      name: guestData.name,
+      provider: 'guest'
+    };
+
+    // Only store email in localStorage as session identifier
+    localStorage.setItem('guestEmail', guestData.email);
+
+    setActiveAccount(guestUser);
+    setHumaneWindows(guestData.windows);
+    setTimezone(guestData.timezone);
+    setCalendarConnected(false);
+
     // If there's a group code, join it
     if (guestData.groupCode) {
       await joinGroup(guestData.groupCode, guestData.email);
-      fetchMyGroups(guestData.email);
     }
-
+    
+    fetchMyGroups(guestData.email);
     setShowGuestModal(false);
   };
 
@@ -174,7 +189,7 @@ function App() {
     if (activeAccount?.provider === 'microsoft') {
       instance.logoutPopup();
     }
-    localStorage.removeItem('guestSession');
+    localStorage.removeItem('guestEmail');
     setActiveAccount(null);
     setGoogleAccessToken(null);
     setCalendarConnected(false);
