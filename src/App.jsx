@@ -512,7 +512,10 @@ function App() {
 
       {/* Admin Dashboard Modal */}
       {showAdminDashboard && (
-        <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
+        <AdminDashboard 
+          onClose={() => setShowAdminDashboard(false)} 
+          currentUserEmail={activeAccount?.username}
+        />
       )}
 
       <main className="main-area">

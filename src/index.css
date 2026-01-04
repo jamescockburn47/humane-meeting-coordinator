@@ -946,6 +946,72 @@ label {
   max-height: 90vh;
 }
 
+.admin-login-modal {
+  max-width: 400px;
+}
+
+.admin-login-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-lock-icon {
+  font-size: 2rem;
+}
+
+.admin-login-header h2 {
+  margin: 0;
+}
+
+.admin-login-info {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-login-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.admin-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.admin-denied {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.admin-denied p:first-child {
+  font-size: 1.25rem;
+  color: #ef4444;
+  margin-bottom: 0.5rem;
+}
+
+.denied-detail {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.denied-email {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.5rem;
+}
+
 .admin-header {
   display: flex;
   justify-content: space-between;
