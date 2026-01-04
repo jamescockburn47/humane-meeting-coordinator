@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getGroupByInviteCode, getGroupMembers, joinGroupByCode, updateProfile } from '../services/supabase';
+import { getGroupByInviteCode, getGroupMembers, joinGroupByCode, updateProfile, getProfile } from '../services/supabase';
 
 export function JoinGroupPage({ 
     inviteCode, 
@@ -14,6 +14,8 @@ export function JoinGroupPage({
     const [members, setMembers] = useState([]);
     const [error, setError] = useState(null);
     const [joining, setJoining] = useState(false);
+    const [isExistingMember, setIsExistingMember] = useState(false);
+    const [showUpdateSettings, setShowUpdateSettings] = useState(false);
 
     // Guest form state
     const [guestMode, setGuestMode] = useState(false);
@@ -26,7 +28,7 @@ export function JoinGroupPage({
 
     useEffect(() => {
         loadGroupDetails();
-    }, [inviteCode]);
+    }, [inviteCode, currentUser]);
 
     const loadGroupDetails = async () => {
         setLoading(true);
@@ -42,6 +44,43 @@ export function JoinGroupPage({
         setGroup(groupData);
         const memberList = await getGroupMembers(groupData.id);
         setMembers(memberList);
+
+        // Check if current user is already a member
+        if (currentUser) {
+            const isMember = memberList.some(m => m.email === currentUser.username);
+            setIsExistingMember(isMember);
+            
+            // Load their existing profile for editing
+            if (isMember) {
+                const profile = await getProfile(currentUser.username);
+                if (profile) {
+                    setGuestName(profile.display_name || '');
+                    setTimezone(profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+                    if (profile.humane_windows && profile.humane_windows.length > 0) {
+                        setWindows(profile.humane_windows);
+                    }
+                }
+            }
+        }
+
+        // Also check localStorage for returning guests
+        const savedGuestEmail = localStorage.getItem('guestEmail');
+        if (savedGuestEmail && !currentUser) {
+            const isMember = memberList.some(m => m.email === savedGuestEmail);
+            if (isMember) {
+                setIsExistingMember(true);
+                setGuestEmail(savedGuestEmail);
+                const profile = await getProfile(savedGuestEmail);
+                if (profile) {
+                    setGuestName(profile.display_name || '');
+                    setTimezone(profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+                    if (profile.humane_windows && profile.humane_windows.length > 0) {
+                        setWindows(profile.humane_windows);
+                    }
+                }
+            }
+        }
+
         setLoading(false);
     };
 
@@ -54,10 +93,35 @@ export function JoinGroupPage({
         if (result.error) {
             alert(result.error.message || 'Failed to join group');
         } else if (result.alreadyMember) {
-            alert('You are already a member of this group!');
+            // Already a member - just go to the group
+            onJoinSuccess(result.group);
         } else {
             onJoinSuccess(result.group);
         }
+        setJoining(false);
+    };
+
+    const handleUpdateSettings = async (e) => {
+        e.preventDefault();
+        setJoining(true);
+
+        const email = currentUser?.username || guestEmail;
+        
+        await updateProfile(
+            email,
+            guestName,
+            timezone,
+            windows[0]?.start || "09:00",
+            windows[0]?.end || "17:00",
+            windows
+        );
+
+        alert('Settings updated! Your new availability will be used for future meetings.');
+        onJoinSuccess(group, currentUser ? null : {
+            username: guestEmail,
+            name: guestName,
+            provider: 'guest'
+        });
         setJoining(false);
     };
 
@@ -134,7 +198,7 @@ export function JoinGroupPage({
             <div className="join-card">
                 <div className="join-header">
                     <img src="/logo.png" alt="Humane Calendar" className="join-logo" />
-                    <h1>You're Invited!</h1>
+                    <h1>{isExistingMember ? 'Welcome Back!' : "You're Invited!"}</h1>
                 </div>
 
                 <div className="group-preview">
@@ -143,7 +207,12 @@ export function JoinGroupPage({
                         <span>👥 {members.length} {members.length === 1 ? 'member' : 'members'}</span>
                         {group.created_by && <span>Created by {group.created_by.split('@')[0]}</span>}
                     </div>
-                    {members.length > 0 && (
+                    {isExistingMember && (
+                        <div className="member-status">
+                            ✓ You're already a member of this group
+                        </div>
+                    )}
+                    {members.length > 0 && !isExistingMember && (
                         <div className="member-preview">
                             {members.slice(0, 5).map(m => (
                                 <div key={m.email} className="member-chip">
@@ -157,8 +226,97 @@ export function JoinGroupPage({
                     )}
                 </div>
 
-                {currentUser ? (
-                    // Already logged in - just join
+                {/* Existing member - show options to view group or update settings */}
+                {isExistingMember && !showUpdateSettings ? (
+                    <div className="existing-member-actions">
+                        <button 
+                            className="btn-primary btn-large" 
+                            onClick={() => onJoinSuccess(group)}
+                        >
+                            📅 View Group & Meetings
+                        </button>
+                        <button 
+                            className="btn-secondary btn-large" 
+                            onClick={() => setShowUpdateSettings(true)}
+                        >
+                            ⚙️ Update My Availability
+                        </button>
+                    </div>
+                ) : isExistingMember && showUpdateSettings ? (
+                    // Settings update form for existing members
+                    <form className="guest-join-form" onSubmit={handleUpdateSettings}>
+                        <h3>Update Your Availability</h3>
+                        <p className="form-subtitle">Changes apply to all future meetings in this group.</p>
+                        
+                        <div className="form-group">
+                            <label>Display Name</label>
+                            <input
+                                type="text"
+                                value={guestName}
+                                onChange={e => setGuestName(e.target.value)}
+                                placeholder="Your name"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Timezone</label>
+                            <select value={timezone} onChange={e => setTimezone(e.target.value)}>
+                                {Intl.supportedValuesOf('timeZone').map(tz => (
+                                    <option key={tz} value={tz}>{tz}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Your Availability</label>
+                            {windows.map((win, idx) => (
+                                <div key={idx} className="window-row-compact">
+                                    <select 
+                                        value={win.type} 
+                                        onChange={e => {
+                                            const newWins = [...windows];
+                                            newWins[idx].type = e.target.value;
+                                            setWindows(newWins);
+                                        }}
+                                    >
+                                        <option value="weekday">Weekdays</option>
+                                        <option value="weekend">Weekends</option>
+                                        <option value="everyday">Every Day</option>
+                                    </select>
+                                    <input 
+                                        type="time" 
+                                        value={win.start}
+                                        onChange={e => {
+                                            const newWins = [...windows];
+                                            newWins[idx].start = e.target.value;
+                                            setWindows(newWins);
+                                        }}
+                                    />
+                                    <span>to</span>
+                                    <input 
+                                        type="time" 
+                                        value={win.end}
+                                        onChange={e => {
+                                            const newWins = [...windows];
+                                            newWins[idx].end = e.target.value;
+                                            setWindows(newWins);
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="form-actions">
+                            <button type="button" className="btn-ghost" onClick={() => setShowUpdateSettings(false)}>
+                                ← Back
+                            </button>
+                            <button type="submit" className="btn-primary" disabled={joining}>
+                                {joining ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </form>
+                ) : currentUser ? (
+                    // Logged in but not yet a member - just join
                     <div className="join-actions-logged-in">
                         <p className="logged-in-as">
                             Logged in as <strong>{currentUser.name}</strong>
