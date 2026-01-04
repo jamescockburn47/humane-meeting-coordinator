@@ -158,10 +158,13 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail }) {
 
                 <div className="privacy-footer">
                     <div className="compliance-badges">
-                        <span className="badge">GDPR Compliant</span>
-                        <span className="badge">CCPA Compliant</span>
-                        <span className="badge">SOC 2 Infrastructure</span>
+                        <span className="badge">GDPR Ready</span>
+                        <span className="badge">CCPA Ready</span>
+                        <span className="badge">SOC 2 Infrastructure*</span>
                     </div>
+                    <p className="compliance-note">
+                        *Built to meet regulatory standards. Not yet formally certified.
+                    </p>
                     <p className="contact-info">
                         Questions? Contact: <a href="mailto:privacy@humanecalendar.com">privacy@humanecalendar.com</a>
                     </p>

@@ -818,6 +818,13 @@ label {
   text-decoration: underline;
 }
 
+.compliance-note {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+
 .last-updated {
   font-size: 0.75rem;
   color: var(--text-muted);

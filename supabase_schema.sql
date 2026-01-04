@@ -214,8 +214,13 @@ IMPORTANT SECURITY CONSIDERATIONS:
    - exportUserData() function exports user data as JSON
    - 30-day automatic data retention for availability_cache
 
-10. SECURITY CERTIFICATIONS (via Supabase)
-    - SOC 2 Type II compliant infrastructure
-    - GDPR compliant data handling
-    - HIPAA eligible (with Business plan)
+10. REGULATORY ALIGNMENT (Not Yet Certified)
+    - Built on SOC 2 Type II compliant infrastructure (Supabase)
+    - Designed to meet GDPR requirements
+    - Designed to meet CCPA requirements
+    - HIPAA-eligible infrastructure available (with Supabase Business plan)
+    
+    NOTE: This application is designed to meet these regulatory standards
+    but has not undergone formal certification or third-party audit.
+    Formal compliance certification should be obtained before enterprise deployment.
 */
