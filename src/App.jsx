@@ -12,6 +12,7 @@ import { WorldClock } from './components/WorldClock';
 import { GuestJoinModal } from './components/GuestJoinModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { AdminDashboard } from './components/AdminDashboard';
+import { JoinGroupPage } from './components/JoinGroupPage';
 
 import './index.css';
 
@@ -30,6 +31,7 @@ function App() {
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myBusySlots, setMyBusySlots] = useState([]); // For calendar overlay
+  const [joinInviteCode, setJoinInviteCode] = useState(null); // For URL-based joins
 
   // New: Multiple Windows State
   const [humaneWindows, setHumaneWindows] = useState([
@@ -41,6 +43,15 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+
+  // Check for invite code in URL on load
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/\/join\/([A-Za-z0-9]+)/);
+    if (match) {
+      setJoinInviteCode(match[1].toUpperCase());
+    }
+  }, []);
 
   // Admin dashboard keyboard shortcut (Ctrl+Shift+A)
   useEffect(() => {
@@ -502,9 +513,39 @@ function App() {
     }
   };
 
+  // --- Handle join success ---
+  const handleJoinSuccess = (group, guestUser = null) => {
+    if (guestUser) {
+      setActiveAccount(guestUser);
+    }
+    // Clear URL and go to group
+    window.history.replaceState({}, '', '/');
+    setJoinInviteCode(null);
+    setSelectedGroup(group);
+    setView('groups');
+    if (activeAccount || guestUser) {
+      fetchMyGroups((guestUser || activeAccount).username);
+    }
+  };
+
   // --- RENDER ---
 
-  /* Blocking Login Screen Removed for Guest Mode */
+  // Show join page if there's an invite code in URL
+  if (joinInviteCode) {
+    return (
+      <JoinGroupPage
+        inviteCode={joinInviteCode}
+        currentUser={activeAccount}
+        onClose={() => {
+          window.history.replaceState({}, '', '/');
+          setJoinInviteCode(null);
+        }}
+        onLoginMS={handleLogin}
+        onLoginGoogle={() => handleGoogleLogin()}
+        onJoinSuccess={handleJoinSuccess}
+      />
+    );
+  }
 
   return (
     <div className="app-wrapper">

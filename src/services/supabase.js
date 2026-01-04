@@ -40,13 +40,30 @@ export async function getProfile(email) {
 }
 
 /**
- * Creates a new group.
+ * Generates a short, readable invite code (6 characters)
+ */
+function generateInviteCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars: I,O,0,1
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+/**
+ * Creates a new group with a short invite code.
  */
 export async function createGroup(name, creatorEmail) {
-    // Reverted to simple insert as 'created_by' column does not exist in simplified schema
+    const inviteCode = generateInviteCode();
+    
     const { data: group, error: groupError } = await supabase
         .from('groups')
-        .insert([{ name }])
+        .insert([{ 
+            name, 
+            created_by: creatorEmail,
+            invite_code: inviteCode 
+        }])
         .select()
         .single();
 
@@ -59,10 +76,61 @@ export async function createGroup(name, creatorEmail) {
     const { error: joinError } = await joinGroup(group.id, creatorEmail);
     if (joinError) {
         console.error("Join after create failed", joinError);
-        // Alert handled inside joinGroup now
     }
 
     return group;
+}
+
+/**
+ * Gets a group by its short invite code
+ */
+export async function getGroupByInviteCode(inviteCode) {
+    const { data, error } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('invite_code', inviteCode.toUpperCase())
+        .single();
+
+    if (error) {
+        console.error("Error finding group by invite code:", error);
+        return null;
+    }
+    return data;
+}
+
+/**
+ * Joins a group using invite code (not UUID)
+ */
+export async function joinGroupByCode(inviteCode, email) {
+    // First find the group by invite code
+    const group = await getGroupByInviteCode(inviteCode);
+    if (!group) {
+        return { error: { message: 'Invalid invite code. Please check and try again.' } };
+    }
+
+    // Check if already a member
+    const { data: existing } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', group.id)
+        .eq('profile_email', email)
+        .single();
+
+    if (existing) {
+        return { error: null, group, alreadyMember: true };
+    }
+
+    // Join the group
+    const { error } = await supabase
+        .from('group_members')
+        .insert({ group_id: group.id, profile_email: email });
+
+    if (error) {
+        console.error("Join group failed", error);
+        return { error };
+    }
+
+    return { error: null, group };
 }
 
 /**

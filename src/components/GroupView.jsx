@@ -111,20 +111,64 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                 <div className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ margin: 0 }}>Members ({members.length})</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button
-                                className="btn-ghost"
-                                style={{ fontSize: '0.8rem', color: '#25D366' }}
+                    </div>
+
+                    {/* Invite Link Section */}
+                    <div className="invite-link-section">
+                        <div className="invite-link-display">
+                            <span className="invite-code">{fullGroupDetails?.invite_code || group.invite_code || '...'}</span>
+                            <button 
+                                className="btn-copy"
                                 onClick={() => {
-                                    const msg = `Join my Humane Scheduling group! Code: ${group.id}`;
+                                    const inviteUrl = `${window.location.origin}/join/${fullGroupDetails?.invite_code || group.invite_code}`;
+                                    navigator.clipboard.writeText(inviteUrl);
+                                    alert('Invite link copied!');
+                                }}
+                                title="Copy invite link"
+                            >
+                                📋 Copy Link
+                            </button>
+                        </div>
+                        <div className="share-buttons">
+                            <button
+                                className="btn-share btn-whatsapp"
+                                onClick={() => {
+                                    const inviteUrl = `${window.location.origin}/join/${fullGroupDetails?.invite_code || group.invite_code}`;
+                                    const msg = `Join my Humane Calendar group "${fullGroupDetails?.name || group.name}"!\n\n${inviteUrl}`;
                                     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                                 }}
                             >
-                                Whatsapp
+                                WhatsApp
                             </button>
-                            <button className="btn-ghost" style={{ fontSize: '0.8rem' }} onClick={() => {
-                                window.location.href = `mailto:?subject=Join Group&body=Code: ${group.id}`;
-                            }}>Email</button>
+                            <button 
+                                className="btn-share btn-email"
+                                onClick={() => {
+                                    const inviteUrl = `${window.location.origin}/join/${fullGroupDetails?.invite_code || group.invite_code}`;
+                                    const subject = `Join my scheduling group: ${fullGroupDetails?.name || group.name}`;
+                                    const body = `Hi!\n\nI'm inviting you to join my Humane Calendar group "${fullGroupDetails?.name || group.name}".\n\nClick here to join:\n${inviteUrl}\n\nThis will help us find a time that works for everyone.`;
+                                    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                                }}
+                            >
+                                Email
+                            </button>
+                            <button 
+                                className="btn-share"
+                                onClick={() => {
+                                    const inviteUrl = `${window.location.origin}/join/${fullGroupDetails?.invite_code || group.invite_code}`;
+                                    if (navigator.share) {
+                                        navigator.share({
+                                            title: fullGroupDetails?.name || group.name,
+                                            text: 'Join my Humane Calendar group!',
+                                            url: inviteUrl
+                                        });
+                                    } else {
+                                        navigator.clipboard.writeText(inviteUrl);
+                                        alert('Link copied!');
+                                    }
+                                }}
+                            >
+                                Share
+                            </button>
                         </div>
                     </div>
 

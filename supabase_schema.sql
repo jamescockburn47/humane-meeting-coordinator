@@ -28,18 +28,32 @@ CREATE INDEX idx_profiles_email ON profiles(email);
 
 -- =====================================================
 -- GROUPS TABLE
--- Shared scheduling spaces
+-- Shared scheduling spaces with short invite codes
 -- =====================================================
 CREATE TABLE groups (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name TEXT NOT NULL,
   created_by TEXT REFERENCES profiles(email) ON DELETE SET NULL,
-  invite_code TEXT UNIQUE DEFAULT substr(md5(random()::text), 0, 7),
+  -- Short 6-char invite code: use uppercase alphanumeric (no confusing chars)
+  invite_code TEXT UNIQUE DEFAULT UPPER(substr(md5(random()::text), 0, 7)),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index for invite code lookups
+-- Index for fast invite code lookups
 CREATE INDEX idx_groups_invite_code ON groups(invite_code);
+
+-- Ensure invite codes are always uppercase for consistency
+CREATE OR REPLACE FUNCTION normalize_invite_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.invite_code := UPPER(NEW.invite_code);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_normalize_invite_code
+BEFORE INSERT OR UPDATE ON groups
+FOR EACH ROW EXECUTE FUNCTION normalize_invite_code();
 
 -- =====================================================
 -- GROUP MEMBERS TABLE
