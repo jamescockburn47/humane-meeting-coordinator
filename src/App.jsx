@@ -11,6 +11,7 @@ import { GroupView } from './components/GroupView';
 import { WorldClock } from './components/WorldClock';
 import { GuestJoinModal } from './components/GuestJoinModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { AdminDashboard } from './components/AdminDashboard';
 
 import './index.css';
 
@@ -26,6 +27,7 @@ function App() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myBusySlots, setMyBusySlots] = useState([]); // For calendar overlay
 
@@ -39,6 +41,18 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+
+  // Admin dashboard keyboard shortcut (Ctrl+Shift+A)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setShowAdminDashboard(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const acc = accounts[0];
@@ -476,6 +490,7 @@ function App() {
         onConnectCalendar={handleConnectCalendar}
         isOpen={sidebarOpen}
         onShowPrivacy={() => setShowPrivacyPolicy(true)}
+        onShowAdmin={() => setShowAdminDashboard(true)}
       />
 
       {/* Guest Join Modal */}
@@ -493,6 +508,11 @@ function App() {
           onDeleteData={handleDeleteAllData}
           userEmail={activeAccount?.username}
         />
+      )}
+
+      {/* Admin Dashboard Modal */}
+      {showAdminDashboard && (
+        <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
       )}
 
       <main className="main-area">

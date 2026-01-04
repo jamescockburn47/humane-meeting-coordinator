@@ -940,6 +940,227 @@ label {
   font-size: 0.8rem;
 }
 
+/* --- Admin Dashboard Styles --- */
+.admin-modal {
+  max-width: 900px;
+  max-height: 90vh;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-header h2 {
+  margin: 0;
+}
+
+.admin-section {
+  margin-bottom: 2rem;
+}
+
+.admin-section h3 {
+  font-size: 1rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  font-family: var(--font-sans);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.status-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.status-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+  font-family: var(--font-serif);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.data-table-container {
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-table th {
+  background: var(--bg-card);
+  color: var(--primary);
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+}
+
+.admin-table td {
+  color: var(--text-main);
+}
+
+.admin-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+.log-container {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.75rem;
+}
+
+.log-entry {
+  padding: 0.2rem 0;
+}
+
+.log-time {
+  color: #666;
+  margin-right: 0.5rem;
+}
+
+.log-info .log-message { color: #8892b0; }
+.log-success .log-message { color: #22c55e; }
+.log-error .log-message { color: #ef4444; }
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.75rem;
+}
+
+.config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.config-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.config-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  min-width: 150px;
+}
+
+.config-item code {
+  background: var(--bg-card);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--primary);
+  word-break: break-all;
+}
+
+.troubleshoot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.troubleshoot-list details {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+
+.troubleshoot-list summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.troubleshoot-list ul {
+  margin: 0.75rem 0 0 0;
+  padding-left: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.troubleshoot-list li {
+  margin-bottom: 0.5rem;
+}
+
+.troubleshoot-list code {
+  background: var(--bg-hover);
+  padding: 0.15rem 0.35rem;
+  border-radius: 2px;
+  font-size: 0.75rem;
+}
+
 /* --- Sidebar Extras --- */
 .divider-text {
   display: flex;
@@ -1075,6 +1296,20 @@ label {
 }
 
 .privacy-badge:hover {
+  color: var(--primary);
+}
+
+.admin-link {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-top: 0.5rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.admin-link:hover {
+  opacity: 1;
   color: var(--primary);
 }
 

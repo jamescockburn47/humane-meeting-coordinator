@@ -13,7 +13,8 @@ export function Sidebar({
     calendarConnected,
     onConnectCalendar,
     isOpen,
-    onShowPrivacy
+    onShowPrivacy,
+    onShowAdmin
 }) {
     const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'GU';
 
@@ -134,6 +135,13 @@ export function Sidebar({
                     onClick={onShowPrivacy}
                 >
                     <span style={{ fontSize: '1rem' }}>🛡️</span> Privacy & Data Protection
+                </div>
+                <div
+                    className="admin-link"
+                    onClick={onShowAdmin}
+                    title="Admin Dashboard (Ctrl+Shift+A)"
+                >
+                    🔧 Status
                 </div>
             </div>
         </div>
