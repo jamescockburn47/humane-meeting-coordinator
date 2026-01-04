@@ -201,12 +201,14 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                         <h3 style={{ margin: 0 }}>Members ({members.length})</h3>
                     </div>
 
-                    {/* Invite Link Section */}
-                    <InviteLinkCard 
-                        groupName={fullGroupDetails?.name || group.name}
-                        inviteCode={fullGroupDetails?.invite_code || group.invite_code}
-                        groupId={group.id}
-                    />
+                    {/* Invite Link Section - Only visible to organizer */}
+                    {canManage && (
+                        <InviteLinkCard 
+                            groupName={fullGroupDetails?.name || group.name}
+                            inviteCode={fullGroupDetails?.invite_code || group.invite_code}
+                            groupId={group.id}
+                        />
+                    )}
 
                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                         {members.map(m => (

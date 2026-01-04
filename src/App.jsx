@@ -479,32 +479,45 @@ function App() {
     try {
       const members = await getGroupMembers(groupId);
       const memberEmails = members.map(m => m.email);
+      const organizerEmail = activeAccount.username;
+
+      // Ensure organizer is included in attendee list
+      if (!memberEmails.includes(organizerEmail)) {
+        memberEmails.push(organizerEmail);
+      }
+
+      console.log("Sending invites to:", memberEmails, "Organizer:", organizerEmail);
 
       if (activeAccount.provider === 'google') {
-        await createGoogleEvent(
+        const result = await createGoogleEvent(
           googleAccessToken,
           subject,
           description,
           slot.start,
           slot.end,
-          memberEmails
+          memberEmails,
+          organizerEmail
         );
+        console.log("Google Event created:", result);
+        alert(`✅ Meeting created with Google Meet!\n\nAll ${memberEmails.length} attendees will receive a calendar invitation with the video link.`);
       } else if (activeAccount.provider === 'microsoft') {
         const tokenResponse = await instance.acquireTokenSilent({ 
           ...loginRequest, 
           account: accounts[0] 
         });
-        await createMeeting(
+        const result = await createMeeting(
           tokenResponse.accessToken,
           subject,
           description,
           slot.start,
           slot.end,
-          memberEmails
+          memberEmails,
+          organizerEmail
         );
+        console.log("Microsoft Event created:", result);
+        alert(`✅ Meeting created with Teams link!\n\nAll ${memberEmails.length} attendees will receive a calendar invitation with the video link.`);
       }
 
-      alert("✅ Meeting invites sent! All attendees will receive a calendar invitation.");
       setSuggestions([]);
     } catch (e) {
       console.error("Booking error:", e);

@@ -53,13 +53,23 @@ export async function fetchGoogleAvailability(accessToken, email, start, end) {
  * 
  * CRITICAL: The `sendUpdates=all` parameter is what triggers Google to send email invitations.
  * Without it, the event is created but attendees receive nothing.
+ * 
+ * Note: The organizer (caller) automatically gets the event on their calendar.
+ * To ensure they also receive an email confirmation, we include them in attendees.
  */
-export async function createGoogleEvent(accessToken, subject, description, start, end, attendees) {
-    console.log("Creating Google Event with invites:", subject, "Attendees:", attendees);
+export async function createGoogleEvent(accessToken, subject, description, start, end, attendees, organizerEmail = null) {
+    console.log("Creating Google Event with invites:", subject, "Attendees:", attendees, "Organizer:", organizerEmail);
+
+    // Build attendee list - organizer is automatically the owner
+    // Include all attendees including organizer so everyone gets email notifications
+    const attendeeList = attendees.map(email => ({ 
+        email,
+        responseStatus: 'needsAction'
+    }));
 
     const event = {
         summary: subject,
-        description: description,
+        description: description + "\n\n---\nScheduled with Humane Calendar 📅",
         start: {
             dateTime: start,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -68,10 +78,7 @@ export async function createGoogleEvent(accessToken, subject, description, start
             dateTime: end,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
         },
-        attendees: attendees.map(email => ({ 
-            email,
-            responseStatus: 'needsAction' // They need to respond
-        })),
+        attendees: attendeeList,
         guestsCanModify: false,
         guestsCanInviteOthers: false,
         guestsCanSeeOtherGuests: true,
@@ -81,6 +88,14 @@ export async function createGoogleEvent(accessToken, subject, description, start
                 requestId: `humane-${Date.now()}`,
                 conferenceSolutionKey: { type: 'hangoutsMeet' }
             }
+        },
+        // Ensure reminders are set
+        reminders: {
+            useDefault: false,
+            overrides: [
+                { method: 'email', minutes: 60 },
+                { method: 'popup', minutes: 15 }
+            ]
         }
     };
 

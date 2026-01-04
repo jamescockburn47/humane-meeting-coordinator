@@ -82,9 +82,12 @@ export async function findMeetingTimes(accessToken, attendees, startDate, endDat
  * 
  * Microsoft Graph automatically sends email invitations when attendees are present.
  * Setting isOnlineMeeting creates a Teams link automatically.
+ * 
+ * Note: The organizer automatically has the event on their calendar.
+ * All attendees (including organizer if in the list) receive email invitations.
  */
-export async function createMeeting(accessToken, subject, description, startTime, endTime, attendees) {
-    console.log("Creating Microsoft Event with invites:", subject, "Attendees:", attendees);
+export async function createMeeting(accessToken, subject, description, startTime, endTime, attendees, organizerEmail = null) {
+    console.log("Creating Microsoft Event with invites:", subject, "Attendees:", attendees, "Organizer:", organizerEmail);
     
     const headers = new Headers();
     const bearer = `Bearer ${accessToken}`;
@@ -92,33 +95,33 @@ export async function createMeeting(accessToken, subject, description, startTime
     headers.append("Authorization", bearer);
     headers.append("Content-Type", "application/json");
 
+    // Build attendee list - everyone gets an invite
+    const attendeeList = attendees.map(email => ({
+        emailAddress: {
+            address: email,
+            name: email
+        },
+        type: "required"
+    }));
+
     const event = {
         subject: subject,
         body: {
             contentType: "HTML",
-            content: description || "You've been invited to a meeting scheduled via Humane Calendar."
+            content: `${description || "You've been invited to a meeting."}<br><br><hr><small>Scheduled with Humane Calendar 📅</small>`
         },
         start: {
-            dateTime: startTime, // ISO String
+            dateTime: startTime,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
         },
         end: {
-            dateTime: endTime, // ISO String
+            dateTime: endTime,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
         },
-        attendees: attendees.map(email => ({
-            emailAddress: {
-                address: email,
-                name: email // Graph often resolves name automatically
-            },
-            type: "required"
-        })),
+        attendees: attendeeList,
         // Request responses from attendees
         responseRequested: true,
         // Create a Teams meeting link automatically
-        // teamsForBusiness = Microsoft 365 accounts
-        // teamsForConsumer = Personal Microsoft accounts
-        // The API will fall back gracefully if Teams isn't available
         isOnlineMeeting: true,
         onlineMeetingProvider: "teamsForBusiness",
         // Allow attendees to propose new times
@@ -126,7 +129,9 @@ export async function createMeeting(accessToken, subject, description, startTime
         // Reminder 15 minutes before
         reminderMinutesBeforeStart: 15,
         // Show as busy
-        showAs: "busy"
+        showAs: "busy",
+        // Importance
+        importance: "normal"
     };
 
     const response = await fetch("https://graph.microsoft.com/v1.0/me/events", {
