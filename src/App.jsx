@@ -65,24 +65,25 @@ function App() {
       setActiveAccount(msAccount);
       setCalendarConnected(true);
       
-      // Fetch Profile Logic
+      // Fetch Profile Logic - load saved preferences
       getProfile(acc.username).then(profile => {
         if (profile) {
+          // Load saved availability windows
           if (profile.humane_windows && profile.humane_windows.length > 0) {
             setHumaneWindows(profile.humane_windows);
           }
           if (profile.timezone) setTimezone(profile.timezone);
+        } else {
+          // Only create profile if it doesn't exist (first time user)
+          updateProfile(
+            acc.username,
+            acc.name,
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+            "09:00",
+            "17:00",
+            [{ start: "09:00", end: "17:00", type: "weekday" }]
+          );
         }
-
-        // Ensure profile exists immediately
-        updateProfile(
-          acc.username,
-          acc.name,
-          profile?.timezone || timezone,
-          "09:00", // Legacy
-          "17:00", // Legacy
-          profile?.humane_windows || humaneWindows
-        );
       });
       fetchMyGroups(acc.username);
     }
@@ -146,8 +147,25 @@ function App() {
 
       setActiveAccount(googleUser);
 
-      // Initial Sync
-      await updateProfile(googleUser.username, googleUser.name, timezone, "09:00", "17:00", humaneWindows);
+      // Check if profile exists - load saved preferences or create new
+      const existingProfile = await getProfile(googleUser.username);
+      if (existingProfile) {
+        // Load saved availability windows
+        if (existingProfile.humane_windows && existingProfile.humane_windows.length > 0) {
+          setHumaneWindows(existingProfile.humane_windows);
+        }
+        if (existingProfile.timezone) setTimezone(existingProfile.timezone);
+      } else {
+        // First time user - create profile with defaults
+        await updateProfile(
+          googleUser.username, 
+          googleUser.name, 
+          Intl.DateTimeFormat().resolvedOptions().timeZone, 
+          "09:00", 
+          "17:00", 
+          [{ start: "09:00", end: "17:00", type: "weekday" }]
+        );
+      }
       fetchMyGroups(googleUser.username);
     },
     scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
@@ -242,9 +260,15 @@ function App() {
         const slots = await fetchGoogleAvailability(googleAccessToken, activeAccount.username, start, end);
         setMyBusySlots(slots);
       } else if (activeAccount.provider === 'microsoft') {
+        const msalAccount = accounts[0];
+        if (!msalAccount) {
+          console.error("Microsoft account not found for busy slots");
+          return;
+        }
+
         const response = await instance.acquireTokenSilent({
           ...loginRequest,
-          account: accounts[0]
+          account: msalAccount
         });
         
         const graphUrl = `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}&$select=start,end`;
@@ -253,6 +277,11 @@ function App() {
         });
         const data = await fetchRes.json();
         
+        if (data.error) {
+          console.error("Microsoft Graph API error:", data.error);
+          return;
+        }
+
         if (data.value) {
           const slots = data.value.map(event => ({
             start: { dateTime: event.start.dateTime },
@@ -315,10 +344,16 @@ function App() {
 
         const slots = await fetchGoogleAvailability(googleAccessToken, activeAccount.username, start, end);
         await syncAvailability(activeAccount.username, slots);
-      } else {
+      } else if (activeAccount.provider === 'microsoft') {
+        // Use MSAL accounts[0], not our custom activeAccount object
+        const msalAccount = accounts[0];
+        if (!msalAccount) {
+          throw new Error("Microsoft account not found. Please log in again.");
+        }
+
         const response = await instance.acquireTokenSilent({
           ...loginRequest,
-          account: activeAccount
+          account: msalAccount
         });
 
         const start = new Date();
@@ -332,9 +367,17 @@ function App() {
         });
         const data = await fetchRes.json();
 
+        if (data.error) {
+          console.error("Microsoft Graph API error:", data.error);
+          throw new Error(data.error.message || "Failed to fetch calendar");
+        }
+
         if (data.value) {
           await syncAvailability(activeAccount.username, data.value);
         }
+      } else {
+        // Guest without calendar - just save profile
+        console.log("Guest user - no calendar to sync");
       }
 
       await updateProfile(
