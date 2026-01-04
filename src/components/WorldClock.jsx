@@ -9,25 +9,25 @@ export function WorldClock({ timezone }) {
     }, []);
 
     const cities = [
-        { name: 'You', zone: timezone, emoji: '📍' },
-        { name: 'London', zone: 'Europe/London', emoji: '🇬🇧' },
-        { name: 'New York', zone: 'America/New_York', emoji: '🇺🇸' },
-        { name: 'San Francisco', zone: 'America/Los_Angeles', emoji: '🌉' },
-        { name: 'Toronto', zone: 'America/Toronto', emoji: '🇨🇦' },
-        { name: 'São Paulo', zone: 'America/Sao_Paulo', emoji: '🇧🇷' },
-        { name: 'Berlin', zone: 'Europe/Berlin', emoji: '🇩🇪' },
-        { name: 'Dubai', zone: 'Asia/Dubai', emoji: '🇦🇪' },
-        { name: 'Singapore', zone: 'Asia/Singapore', emoji: '🇸🇬' },
-        { name: 'Hong Kong', zone: 'Asia/Hong_Kong', emoji: '🇭🇰' },
-        { name: 'Tokyo', zone: 'Asia/Tokyo', emoji: '🇯🇵' },
-        { name: 'Sydney', zone: 'Australia/Sydney', emoji: '🇦🇺' },
-        { name: 'Auckland', zone: 'Pacific/Auckland', emoji: '🇳🇿' },
-        { name: 'Bangalore', zone: 'Asia/Kolkata', emoji: '🇮🇳' },
+        { name: 'You', zone: timezone },
+        { name: 'London', zone: 'Europe/London' },
+        { name: 'New York', zone: 'America/New_York' },
+        { name: 'San Francisco', zone: 'America/Los_Angeles' },
+        { name: 'Toronto', zone: 'America/Toronto' },
+        { name: 'São Paulo', zone: 'America/Sao_Paulo' },
+        { name: 'Berlin', zone: 'Europe/Berlin' },
+        { name: 'Dubai', zone: 'Asia/Dubai' },
+        { name: 'Singapore', zone: 'Asia/Singapore' },
+        { name: 'Hong Kong', zone: 'Asia/Hong_Kong' },
+        { name: 'Tokyo', zone: 'Asia/Tokyo' },
+        { name: 'Sydney', zone: 'Australia/Sydney' },
+        { name: 'Auckland', zone: 'Pacific/Auckland' },
+        { name: 'Bangalore', zone: 'Asia/Kolkata' },
     ];
 
     return (
         <div className="card world-clock-card">
-            <h3 style={{ marginBottom: '0.75rem', fontSize: '0.9rem' }}>🌍 Global Tech Hubs</h3>
+            <h3 style={{ marginBottom: '0.75rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Global Tech Hubs</h3>
             <div className="world-clock-grid">
                 {cities.map(city => {
                     let cityTime;
@@ -37,18 +37,16 @@ export function WorldClock({ timezone }) {
                         cityTime = time;
                     }
                     const hour = cityTime.getHours();
-                    const isDay = hour >= 7 && hour < 19;
+                    const isDay = hour >= 6 && hour < 20;
                     const isWorkHours = hour >= 9 && hour < 18;
 
                     return (
-                        <div key={city.name} className={`clock-item ${isWorkHours ? 'work-hours' : ''} ${!isDay ? 'night' : ''}`}>
-                            <span className="clock-emoji">{city.emoji}</span>
-                            <div className="clock-info">
-                                <div className="clock-city">{city.name}</div>
-                                <div className="clock-time">
-                                    {cityTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </div>
+                        <div key={city.name} className={`clock-item ${isDay ? 'daytime' : 'nighttime'} ${isWorkHours ? 'work-hours' : ''}`}>
+                            <div className="clock-city">{city.name}</div>
+                            <div className="clock-time">
+                                {cityTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
+                            <div className="clock-indicator">{isDay ? '☀' : '☾'}</div>
                         </div>
                     )
                 })}

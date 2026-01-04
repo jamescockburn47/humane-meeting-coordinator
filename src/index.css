@@ -783,69 +783,83 @@ label {
 
 /* --- World Clock --- */
 .world-clock-card {
-  padding: 1rem !important;
+  padding: 0.75rem !important;
 }
 
 .world-clock-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.4rem;
-}
-
-@media (min-width: 1200px) {
-  .world-clock-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .clock-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.5rem;
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  border-left: 2px solid var(--border);
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
   transition: all var(--transition-fast);
 }
 
-.clock-item.work-hours {
-  border-left-color: var(--primary);
-  background: rgba(99, 102, 241, 0.05);
+/* Daytime - bright and clear */
+.clock-item.daytime {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.15), rgba(250, 204, 21, 0.05));
+  border-left: 3px solid #facc15;
 }
 
-.clock-item.night {
-  opacity: 0.5;
-}
-
-.clock-emoji {
-  font-size: 0.9rem;
-}
-
-.clock-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.clock-city {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.clock-time {
-  font-size: 0.85rem;
-  font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+.clock-item.daytime .clock-time {
   color: var(--text-main);
 }
 
-.clock-item.night .clock-time {
+.clock-item.daytime .clock-indicator {
+  color: #facc15;
+}
+
+/* Work hours - extra highlight */
+.clock-item.daytime.work-hours {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+  border-left-color: #22c55e;
+}
+
+.clock-item.daytime.work-hours .clock-indicator {
+  color: #22c55e;
+}
+
+/* Nighttime - dimmed and dark */
+.clock-item.nighttime {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.1), transparent);
+  border-left: 3px solid #4338ca;
+  opacity: 0.6;
+}
+
+.clock-item.nighttime .clock-time {
   color: var(--text-muted);
+}
+
+.clock-item.nighttime .clock-indicator {
+  color: #818cf8;
+}
+
+.clock-city {
+  flex: 1;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.clock-time {
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  min-width: 50px;
+  text-align: right;
+}
+
+.clock-indicator {
+  font-size: 0.75rem;
+  width: 16px;
+  text-align: center;
 }
 
 .join-options {
