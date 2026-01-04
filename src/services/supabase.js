@@ -82,20 +82,39 @@ export async function createGroup(name, creatorEmail) {
 }
 
 /**
- * Gets a group by its short invite code
+ * Gets a group by its short invite code OR UUID (for backwards compatibility)
  */
 export async function getGroupByInviteCode(inviteCode) {
-    const { data, error } = await supabase
+    // First, try to find by short invite code
+    const { data: byCode, error: codeError } = await supabase
         .from('groups')
         .select('*')
         .eq('invite_code', inviteCode.toUpperCase())
         .single();
 
-    if (error) {
-        console.error("Error finding group by invite code:", error);
-        return null;
+    if (byCode) {
+        return byCode;
     }
-    return data;
+
+    // Fallback: try to find by UUID (for old links)
+    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inviteCode);
+    
+    if (isUUID) {
+        const { data: byId, error: idError } = await supabase
+            .from('groups')
+            .select('*')
+            .eq('id', inviteCode)
+            .single();
+
+        if (byId) {
+            console.log("Found group by UUID (legacy link):", byId.name);
+            return byId;
+        }
+    }
+
+    console.error("Group not found by invite code or UUID:", inviteCode);
+    return null;
 }
 
 /**

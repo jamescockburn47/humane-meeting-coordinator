@@ -3,9 +3,11 @@ import { BookingModal } from './BookingModal';
 import { getGroupMembers, removeMember, makeAdmin, getGroupDetails } from '../services/supabase';
 
 // Invite Link Card Component - Focused on sharing links, not codes
-function InviteLinkCard({ groupName, inviteCode }) {
+function InviteLinkCard({ groupName, inviteCode, groupId }) {
     const [copied, setCopied] = useState(false);
-    const inviteUrl = `${window.location.origin}/join/${inviteCode}`;
+    // Use invite_code if available, otherwise fall back to group UUID
+    const code = inviteCode || groupId;
+    const inviteUrl = `${window.location.origin}/join/${code}`;
 
     const handleCopy = async () => {
         await navigator.clipboard.writeText(inviteUrl);
@@ -203,6 +205,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     <InviteLinkCard 
                         groupName={fullGroupDetails?.name || group.name}
                         inviteCode={fullGroupDetails?.invite_code || group.invite_code}
+                        groupId={group.id}
                     />
 
                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>

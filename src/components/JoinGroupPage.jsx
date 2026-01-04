@@ -186,6 +186,11 @@ export function JoinGroupPage({
                         <h2>Link Not Found</h2>
                         <p>This invite link may have expired or the group no longer exists.</p>
                         <p className="error-suggestion">Please ask the group organizer to send you a new link.</p>
+                        <details className="error-debug">
+                            <summary>Technical Details</summary>
+                            <p>Code: <code>{inviteCode}</code></p>
+                            <p>Check browser console for more info.</p>
+                        </details>
                         <button className="btn-primary" onClick={onClose}>Go to Dashboard</button>
                     </div>
                 </div>
