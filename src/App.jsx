@@ -447,15 +447,32 @@ function App() {
       const members = await getGroupMembers(groupId);
       const memberEmails = members.map(m => m.email);
 
+      console.log("=== FIND TIMES DEBUG ===");
+      console.log("Group ID:", groupId);
+      console.log("Date range:", startStr, "to", endStr);
+      console.log("Members found:", members.length);
+      members.forEach(m => {
+        console.log(`  - ${m.email}: timezone=${m.timezone}, windows=`, m.humane_windows);
+      });
+
       const start = new Date(startStr);
       const end = new Date(endStr);
-      end.setHours(23, 59, 59); // End of the last day
+      end.setHours(23, 59, 59);
 
       const busySlots = await getBusySlotsForUsers(memberEmails, start, end);
+      console.log("Busy slots fetched:", busySlots.length);
+
       const slots = findCommonHumaneSlots(members, busySlots, startStr, endStr, 60);
+      console.log("Slots found:", slots.length);
+      
+      if (slots.length === 0) {
+        alert("No matching times found. This could mean:\n\n1. Members' availability windows don't overlap\n2. All overlapping times are during busy periods\n3. Members haven't set their availability windows\n\nCheck the browser console for detailed debugging info.");
+      }
+      
       setSuggestions(slots);
     } catch (e) {
-      console.error(e);
+      console.error("Find times error:", e);
+      alert("Error finding times: " + e.message);
       setLoading(false);
     }
   };
@@ -505,6 +522,15 @@ function App() {
           ...loginRequest, 
           account: accounts[0] 
         });
+        
+        // Detect if personal Microsoft account (outlook.com, hotmail.com, live.com)
+        // vs work/school account
+        const personalDomains = ['outlook.com', 'hotmail.com', 'live.com', 'msn.com'];
+        const emailDomain = organizerEmail.split('@')[1]?.toLowerCase() || '';
+        const isPersonalAccount = personalDomains.some(d => emailDomain.includes(d));
+        
+        console.log("Account type:", isPersonalAccount ? "Personal" : "Work/School");
+        
         const result = await createMeeting(
           tokenResponse.accessToken,
           subject,
@@ -512,10 +538,18 @@ function App() {
           slot.start,
           slot.end,
           memberEmails,
-          organizerEmail
+          organizerEmail,
+          isPersonalAccount
         );
         console.log("Microsoft Event created:", result);
-        alert(`✅ Meeting created with Teams link!\n\nAll ${memberEmails.length} attendees will receive a calendar invitation with the video link.`);
+        
+        // Show appropriate message
+        const hasTeams = result.onlineMeeting?.joinUrl;
+        if (hasTeams) {
+          alert(`✅ Meeting created with Teams link!\n\nAll ${memberEmails.length - 1} attendees will receive a calendar invitation.\n\nThe event is now on your calendar.`);
+        } else {
+          alert(`✅ Meeting created!\n\nAll ${memberEmails.length - 1} attendees will receive a calendar invitation.\n\nNote: Teams link may not be available for personal accounts. Consider using Skype or sharing a video link in the description.`);
+        }
       }
 
       setSuggestions([]);

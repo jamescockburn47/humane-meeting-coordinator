@@ -86,8 +86,15 @@ export async function findMeetingTimes(accessToken, attendees, startDate, endDat
  * Note: The organizer automatically has the event on their calendar.
  * All attendees (including organizer if in the list) receive email invitations.
  */
-export async function createMeeting(accessToken, subject, description, startTime, endTime, attendees, organizerEmail = null) {
-    console.log("Creating Microsoft Event with invites:", subject, "Attendees:", attendees, "Organizer:", organizerEmail);
+export async function createMeeting(accessToken, subject, description, startTime, endTime, attendees, organizerEmail = null, isPersonalAccount = false) {
+    console.log("Creating Microsoft Event:", {
+        subject,
+        attendees,
+        organizerEmail,
+        isPersonalAccount,
+        startTime,
+        endTime
+    });
     
     const headers = new Headers();
     const bearer = `Bearer ${accessToken}`;
@@ -96,13 +103,23 @@ export async function createMeeting(accessToken, subject, description, startTime
     headers.append("Content-Type", "application/json");
 
     // Build attendee list - everyone gets an invite
-    const attendeeList = attendees.map(email => ({
-        emailAddress: {
-            address: email,
-            name: email
-        },
-        type: "required"
-    }));
+    // Note: The organizer doesn't receive an email invite (they're the owner)
+    // but the event appears on their calendar
+    const attendeeList = attendees
+        .filter(email => email !== organizerEmail) // Don't include organizer as attendee
+        .map(email => ({
+            emailAddress: {
+                address: email,
+                name: email
+            },
+            type: "required"
+        }));
+
+    // Determine Teams provider based on account type
+    // Personal Microsoft accounts use "teamsForConsumer"
+    // Work/School accounts use "teamsForBusiness"
+    const teamsProvider = isPersonalAccount ? "teamsForConsumer" : "teamsForBusiness";
+    console.log("Using Teams provider:", teamsProvider);
 
     const event = {
         subject: subject,
@@ -123,7 +140,7 @@ export async function createMeeting(accessToken, subject, description, startTime
         responseRequested: true,
         // Create a Teams meeting link automatically
         isOnlineMeeting: true,
-        onlineMeetingProvider: "teamsForBusiness",
+        onlineMeetingProvider: teamsProvider,
         // Allow attendees to propose new times
         allowNewTimeProposals: true,
         // Reminder 15 minutes before
