@@ -119,9 +119,9 @@ export function JoinGroupPage({
                 <div className="join-card">
                     <div className="join-error">
                         <span className="error-icon">❌</span>
-                        <h2>Group Not Found</h2>
-                        <p>{error}</p>
-                        <p className="invite-code-display">Code entered: <strong>{inviteCode}</strong></p>
+                        <h2>Link Not Found</h2>
+                        <p>This invite link may have expired or the group no longer exists.</p>
+                        <p className="error-suggestion">Please ask the group organizer to send you a new link.</p>
                         <button className="btn-primary" onClick={onClose}>Go to Dashboard</button>
                     </div>
                 </div>

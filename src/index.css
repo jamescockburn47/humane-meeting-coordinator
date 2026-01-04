@@ -662,12 +662,9 @@ label {
   margin-bottom: 1rem;
 }
 
-.invite-code-display {
-  font-family: monospace;
-  background: var(--bg-card);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
-  display: inline-block;
+.error-suggestion {
+  color: var(--text-muted);
+  font-size: 0.9rem;
   margin: 1rem 0;
 }
 
@@ -802,56 +799,93 @@ label {
   flex: 1;
 }
 
-/* --- Invite Link Section --- */
-.invite-link-section {
-  background: var(--bg-card);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1rem;
+/* --- Invite Link Card --- */
+.invite-link-card {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-sidebar));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.invite-link-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
-.invite-link-display {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.invite-code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+.invite-icon {
   font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: var(--primary);
 }
 
-.btn-copy {
-  background: var(--bg-hover);
+.invite-link-header h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.invite-link-header p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.invite-url-box {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.invite-url-box input {
+  flex: 1;
+  padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
+  background: var(--bg-app);
   font-size: 0.85rem;
-  transition: all var(--transition-fast);
+  color: var(--text-main);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-.btn-copy:hover {
-  background: var(--primary-dim);
+.invite-url-box input:focus {
+  outline: none;
   border-color: var(--primary);
 }
 
-.share-buttons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.btn-copy-link {
+  padding: 0.75rem 1rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
 }
 
-.btn-share {
+.btn-copy-link:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-copy-link.copied {
+  background: #10b981;
+}
+
+.share-buttons-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-share-icon {
   flex: 1;
-  min-width: 80px;
-  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-hover);
@@ -860,27 +894,53 @@ label {
   transition: all var(--transition-fast);
 }
 
-.btn-share:hover {
-  background: var(--bg-card);
-  transform: translateY(-1px);
+.btn-share-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
-.btn-whatsapp {
+.btn-share-icon:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-share-icon.btn-whatsapp {
   color: #25D366;
   border-color: #25D366;
 }
 
-.btn-whatsapp:hover {
+.btn-share-icon.btn-whatsapp:hover {
   background: rgba(37, 211, 102, 0.1);
 }
 
-.btn-email {
+.btn-share-icon.btn-email-share {
   color: var(--primary);
   border-color: var(--primary);
 }
 
-.btn-email:hover {
+.btn-share-icon.btn-email-share:hover {
   background: var(--primary-dim);
+}
+
+.invite-note {
+  margin: 1rem 0 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (max-width: 500px) {
+  .invite-url-box {
+    flex-direction: column;
+  }
+  
+  .share-buttons-row {
+    flex-wrap: wrap;
+  }
+  
+  .btn-share-icon {
+    min-width: 45%;
+  }
 }
 
 .spinner {
