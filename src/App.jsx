@@ -9,6 +9,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { Sidebar } from './components/Sidebar';
 import { GroupView } from './components/GroupView';
 import { WorldClock } from './components/WorldClock';
+import { GuestJoinModal } from './components/GuestJoinModal';
 
 import './index.css';
 
@@ -16,11 +17,14 @@ function App() {
   const { instance, accounts } = useMsal();
   const [activeAccount, setActiveAccount] = useState(null);
   const [googleAccessToken, setGoogleAccessToken] = useState(null);
+  const [calendarConnected, setCalendarConnected] = useState(false);
 
   // State
   const [view, setView] = useState('dashboard');
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // New: Multiple Windows State
   const [humaneWindows, setHumaneWindows] = useState([
@@ -35,8 +39,15 @@ function App() {
 
   useEffect(() => {
     const acc = accounts[0];
-    setActiveAccount(acc || null);
     if (acc) {
+      const msAccount = {
+        username: acc.username,
+        name: acc.name,
+        provider: 'microsoft'
+      };
+      setActiveAccount(msAccount);
+      setCalendarConnected(true);
+      
       // Fetch Profile Logic
       getProfile(acc.username).then(profile => {
         if (profile) {
@@ -60,6 +71,18 @@ function App() {
     }
   }, [accounts]);
 
+  // Load guest session from localStorage
+  useEffect(() => {
+    const guestSession = localStorage.getItem('guestSession');
+    if (guestSession && !activeAccount) {
+      const guest = JSON.parse(guestSession);
+      setActiveAccount(guest);
+      if (guest.humane_windows) setHumaneWindows(guest.humane_windows);
+      if (guest.timezone) setTimezone(guest.timezone);
+      fetchMyGroups(guest.username);
+    }
+  }, []);
+
   const fetchMyGroups = async (email) => {
     // Fetch logic for groups would go here in V2
     // For now we persist in state or fetch from Supabase if we implemented that query
@@ -78,6 +101,7 @@ function App() {
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setGoogleAccessToken(tokenResponse.access_token);
+      setCalendarConnected(true);
 
       const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
         headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
@@ -92,15 +116,69 @@ function App() {
       setActiveAccount(googleUser);
 
       // Initial Sync
-      await updateProfile(googleUser.username, googleUser.name, timezone, humaneStart, humaneEnd);
+      await updateProfile(googleUser.username, googleUser.name, timezone, "09:00", "17:00", humaneWindows);
+      fetchMyGroups(googleUser.username);
     },
     scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
   });
 
+  // Guest login (no calendar integration)
+  const handleGuestJoin = async (guestData) => {
+    const guestUser = {
+      username: guestData.email,
+      name: guestData.name,
+      provider: 'guest'
+    };
+
+    // Save to localStorage for persistence
+    localStorage.setItem('guestSession', JSON.stringify({
+      ...guestUser,
+      humane_windows: guestData.windows,
+      timezone: guestData.timezone
+    }));
+
+    setActiveAccount(guestUser);
+    setHumaneWindows(guestData.windows);
+    setTimezone(guestData.timezone);
+    setCalendarConnected(false);
+
+    // Create/update profile in Supabase
+    await updateProfile(
+      guestData.email,
+      guestData.name,
+      guestData.timezone,
+      guestData.windows[0]?.start || "09:00",
+      guestData.windows[0]?.end || "17:00",
+      guestData.windows
+    );
+
+    // If there's a group code, join it
+    if (guestData.groupCode) {
+      await joinGroup(guestData.groupCode, guestData.email);
+      fetchMyGroups(guestData.email);
+    }
+
+    setShowGuestModal(false);
+  };
+
+  // Connect calendar for existing guest
+  const handleConnectCalendar = (provider) => {
+    if (provider === 'microsoft') {
+      handleLogin();
+    } else {
+      handleGoogleLogin();
+    }
+  };
+
   const handleLogout = () => {
-    instance.logoutPopup();
+    if (activeAccount?.provider === 'microsoft') {
+      instance.logoutPopup();
+    }
+    localStorage.removeItem('guestSession');
     setActiveAccount(null);
     setGoogleAccessToken(null);
+    setCalendarConnected(false);
+    setGroups([]);
   };
 
   // --- ACTIONS ---
@@ -252,16 +330,39 @@ function App() {
 
   return (
     <div className="app-wrapper">
+      {/* Mobile Header */}
+      <div className="mobile-header">
+        <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+          ☰
+        </button>
+        <img src="/logo.png" alt="Logo" style={{ height: '32px' }} />
+      </div>
+
+      {/* Overlay for mobile sidebar */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
       <Sidebar
         activeView={view}
-        setView={setView}
+        setView={(v) => { setView(v); setSidebarOpen(false); }}
         user={activeAccount}
         onLogout={handleLogout}
         syncStatus={syncStatus}
         onSync={handleSync}
         onLoginMS={handleLogin}
         onLoginGoogle={() => handleGoogleLogin()}
+        onGuestJoin={() => setShowGuestModal(true)}
+        calendarConnected={calendarConnected}
+        onConnectCalendar={handleConnectCalendar}
+        isOpen={sidebarOpen}
       />
+
+      {/* Guest Join Modal */}
+      {showGuestModal && (
+        <GuestJoinModal
+          onClose={() => setShowGuestModal(false)}
+          onJoin={handleGuestJoin}
+        />
+      )}
 
       <main className="main-area">
         {view === 'dashboard' && (
