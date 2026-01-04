@@ -1,169 +1,411 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-import { callMsGraph, findMeetingTimes } from "./services/graph";
-import './App.css'
+import { updateProfile, getProfile, createGroup, joinGroup, getGroupMembers, getBusySlotsForUsers, syncAvailability, supabase } from "./services/supabase";
+import { findCommonHumaneSlots } from './services/scheduler';
+import { callMsGraph, findMeetingTimes, createMeeting } from './services/graph';
+import { fetchGoogleAvailability, createGoogleEvent } from './services/google';
+import { useGoogleLogin } from '@react-oauth/google';
+import { Sidebar } from './components/Sidebar';
+import { GroupView } from './components/GroupView';
+import { WorldClock } from './components/WorldClock';
+
+import './index.css';
 
 function App() {
   const { instance, accounts } = useMsal();
-  const [attendees, setAttendees] = useState("");
-  const [duration, setDuration] = useState(60);
-  const [meetingDate, setMeetingDate] = useState(new Date().toISOString().split('T')[0]);
-  const [suggestions, setSuggestions] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [userData, setUserData] = useState(null);
+  const [activeAccount, setActiveAccount] = useState(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState(null);
 
-  const activeAccount = accounts[0];
+  // State
+  const [view, setView] = useState('dashboard');
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+
+  // New: Multiple Windows State
+  const [humaneWindows, setHumaneWindows] = useState([
+    { start: "09:00", end: "17:00", type: "weekday" } // Default
+  ]);
+
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [syncStatus, setSyncStatus] = useState("Idle");
+
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+
+  useEffect(() => {
+    const acc = accounts[0];
+    setActiveAccount(acc || null);
+    if (acc) {
+      // Fetch Profile Logic
+      getProfile(acc.username).then(profile => {
+        if (profile) {
+          if (profile.humane_windows && profile.humane_windows.length > 0) {
+            setHumaneWindows(profile.humane_windows);
+          }
+          if (profile.timezone) setTimezone(profile.timezone);
+        }
+
+        // Ensure profile exists immediately
+        updateProfile(
+          acc.username,
+          acc.name,
+          profile?.timezone || timezone,
+          "09:00", // Legacy
+          "17:00", // Legacy
+          profile?.humane_windows || humaneWindows
+        );
+      });
+      fetchMyGroups(acc.username);
+    }
+  }, [accounts]);
+
+  const fetchMyGroups = async (email) => {
+    // Fetch logic for groups would go here in V2
+    // For now we persist in state or fetch from Supabase if we implemented that query
+    const { data } = await supabase
+      .from('group_members')
+      .select('groups(*)')
+      .eq('profile_email', email);
+
+    if (data) setGroups(data.map(d => d.groups));
+  };
 
   const handleLogin = () => {
-    instance.loginPopup(loginRequest).then(response => {
-      // Successful login
-      console.log("Login success:", response);
-    }).catch(e => {
-      console.error(e);
-    });
+    instance.loginPopup(loginRequest).catch(console.error);
   };
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setGoogleAccessToken(tokenResponse.access_token);
+
+      const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+        headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+      }).then(res => res.json());
+
+      const googleUser = {
+        username: userInfo.email,
+        name: userInfo.name,
+        provider: 'google'
+      };
+
+      setActiveAccount(googleUser);
+
+      // Initial Sync
+      await updateProfile(googleUser.username, googleUser.name, timezone, humaneStart, humaneEnd);
+    },
+    scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
+  });
 
   const handleLogout = () => {
-    instance.logoutPopup().catch(e => {
-      console.error(e);
-    });
+    instance.logoutPopup();
+    setActiveAccount(null);
+    setGoogleAccessToken(null);
   };
 
-  const handleFindTimes = async () => {
+  // --- ACTIONS ---
+
+  const handleSync = async () => {
     if (!activeAccount) return;
-    setLoading(true);
-
-    const request = {
-      ...loginRequest,
-      account: activeAccount
-    };
-
+    setSyncStatus("Syncing...");
     try {
-      const response = await instance.acquireTokenSilent(request);
-      const accessToken = response.accessToken;
+      if (activeAccount.provider === 'google') {
+        const start = new Date();
+        const end = new Date();
+        end.setDate(end.getDate() + 14);
 
-      // Parse attendees
-      const attendeeList = attendees.split(',').map(e => e.trim()).filter(e => e);
+        const slots = await fetchGoogleAvailability(googleAccessToken, activeAccount.username, start, end);
+        await syncAvailability(activeAccount.username, slots);
+      } else {
+        const response = await instance.acquireTokenSilent({
+          ...loginRequest,
+          account: activeAccount
+        });
 
-      // Define range: Selected date 00:00 to +3 days (or just 24h?)
-      // Let's search for the selected date + 48 hours to give some options
-      const start = new Date(meetingDate);
-      const end = new Date(meetingDate);
-      end.setDate(end.getDate() + 3);
+        const start = new Date();
+        const end = new Date();
+        end.setDate(end.getDate() + 14);
 
-      const data = await findMeetingTimes(accessToken, attendeeList, start, end, duration);
-      setSuggestions(data.meetingTimeSuggestions);
+        const graphUrl = `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}&$select=start,end`;
+
+        const fetchRes = await fetch(graphUrl, {
+          headers: { Authorization: `Bearer ${response.accessToken}` }
+        });
+        const data = await fetchRes.json();
+
+        if (data.value) {
+          await syncAvailability(activeAccount.username, data.value);
+        }
+      }
+
+      await updateProfile(
+        activeAccount.username,
+        activeAccount.name,
+        timezone,
+        humaneWindows[0]?.start || "09:00", // Fallback for legacy
+        humaneWindows[0]?.end || "17:00",   // Fallback for legacy
+        humaneWindows // New JSONB
+      );
+
+      setSyncStatus("Synced!");
+      setTimeout(() => setSyncStatus("Idle"), 3000);
+    } catch (err) {
+      console.error(err);
+      setSyncStatus("Failed");
+    }
+  };
+
+  const checkOrganiserAccess = () => {
+    const isOrganiser = localStorage.getItem('isOrganiser');
+    if (isOrganiser === 'true') return true;
+
+    const code = prompt("Enter Organiser Access Code:");
+    if (code === import.meta.env.VITE_ORGANISER_CODE) {
+      localStorage.setItem('isOrganiser', 'true');
+      return true;
+    } else {
+      alert("Incorrect Code. Access Denied.");
+      return false;
+    }
+  };
+
+  const handleCreateGroup = async () => {
+    if (!checkOrganiserAccess()) return;
+
+    const name = prompt("Group Name:");
+    if (!name) return;
+    const grp = await createGroup(name, activeAccount.username);
+    if (grp) {
+      setGroups([...groups, grp]);
+    }
+  };
+
+  const handleJoinGroup = async () => {
+    if (!activeAccount) { alert("Please sign in to join a group."); return; }
+    const id = prompt("Group ID:");
+    if (!id) return;
+    await joinGroup(id, activeAccount.username);
+    fetchMyGroups(activeAccount.username);
+  };
+
+  const handleFindTimes = async (groupId, startStr, endStr) => {
+    setLoading(true);
+    try {
+      const members = await getGroupMembers(groupId);
+      const memberEmails = members.map(m => m.email);
+
+      const start = new Date(startStr);
+      const end = new Date(endStr);
+      end.setHours(23, 59, 59); // End of the last day
+
+      const busySlots = await getBusySlotsForUsers(memberEmails, start, end);
+      const slots = findCommonHumaneSlots(members, busySlots, startStr, endStr, 60);
+      setSuggestions(slots);
     } catch (e) {
       console.error(e);
+      setLoading(false);
+    }
+  };
+
+  const handleBookMeeting = async (groupId, slot, subject, description) => {
+    if (!activeAccount) { alert("Please sign in to book a meeting."); return; }
+    if (!checkOrganiserAccess()) return;
+
+    setLoading(true);
+    try {
+      const members = await getGroupMembers(groupId);
+      const memberEmails = members.map(m => m.email); // .filter(e => e !== activeAccount.username) ?
+
+      if (activeAccount.provider === 'google') {
+        await createGoogleEvent(
+          googleAccessToken,
+          subject,
+          description,
+          slot.start,
+          slot.end,
+          memberEmails
+        );
+      } else {
+        await createMeeting(
+          await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount }).then(res => res.accessToken),
+          subject,
+          description,
+          slot.start,
+          slot.end,
+          memberEmails
+        );
+      }
+
+      alert("Meeting Booked! Check your Calendar.");
+      setSuggestions([]);
+    } catch (e) {
+      console.error(e);
+      alert("Booking Failed: " + e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (dateTimeStr) => {
-    const date = new Date(dateTimeStr + "Z"); // Incoming is UTC
-    return date.toLocaleString([], {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // --- RENDER ---
+
+  /* Blocking Login Screen Removed for Guest Mode */
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>Meeting Coordinator</h1>
-        <div className="auth-controls">
-          {activeAccount ? (
-            <div className="user-info">
-              <span>Hello, {activeAccount.name}</span>
-              <button onClick={handleLogout} className="btn-secondary">Logout</button>
-            </div>
-          ) : (
-            <button onClick={handleLogin} className="btn-primary">Sign In with Microsoft</button>
-          )}
-        </div>
-      </header>
+    <div className="app-wrapper">
+      <Sidebar
+        activeView={view}
+        setView={setView}
+        user={activeAccount}
+        onLogout={handleLogout}
+        syncStatus={syncStatus}
+        onSync={handleSync}
+        onLoginMS={handleLogin}
+        onLoginGoogle={() => handleGoogleLogin()}
+      />
 
-      <main className="main-content">
-        {!activeAccount && (
-          <div className="welcome-card">
-            <h2>Schedule Across Timezones</h2>
-            <p>Find humane meeting times for everyone, instantly.</p>
-            <div className="login-prompt">Please sign in to continue.</div>
+      <main className="main-area">
+        {view === 'dashboard' && (
+          <div className="animate-fade-in">
+            <h2>Dashboard</h2>
+
+            <div className="grid-cols-2" style={{ marginBottom: '2rem' }}>
+              <div className="card">
+                <h3>My Humane Hours</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>When do you prefer to meet?</p>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>Your Time Zone</label>
+                  <input
+                    type="text"
+                    value={timezone}
+                    onChange={e => setTimezone(e.target.value)}
+                    list="timezones"
+                  />
+                  <datalist id="timezones">
+                    {Intl.supportedValuesOf('timeZone').map((tz) => (
+                      <option key={tz} value={tz} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>Your Availability Windows</label>
+
+                  {humaneWindows.map((win, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <select
+                        value={win.type}
+                        onChange={(e) => {
+                          const newWins = [...humaneWindows];
+                          newWins[idx].type = e.target.value;
+                          setHumaneWindows(newWins);
+                        }}
+                        style={{ width: '170px', fontSize: '0.8rem' }}
+                      >
+                        <option value="weekday">Weekdays (Mon-Fri)</option>
+                        <option value="weekend">Weekends (Sat-Sun)</option>
+                        <option value="me_workday">Sun-Thu (Mid. East)</option>
+                        <option value="me_weekend">Fri-Sat (Mid. East)</option>
+                        <option value="everyday">Every Day</option>
+                      </select>
+                      <input
+                        type="time"
+                        value={win.start}
+                        onChange={e => {
+                          const newWins = [...humaneWindows];
+                          newWins[idx].start = e.target.value;
+                          setHumaneWindows(newWins);
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ color: 'var(--text-muted)' }}>-</span>
+                      <input
+                        type="time"
+                        value={win.end}
+                        onChange={e => {
+                          const newWins = [...humaneWindows];
+                          newWins[idx].end = e.target.value;
+                          setHumaneWindows(newWins);
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        className="btn-ghost"
+                        style={{ padding: '0 0.5rem', color: '#ff4444' }}
+                        onClick={() => {
+                          const newWins = humaneWindows.filter((_, i) => i !== idx);
+                          setHumaneWindows(newWins);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    className="btn-ghost"
+                    style={{ fontSize: '0.8rem', marginTop: '0.5rem', border: '1px dashed var(--border)', width: '100%' }}
+                    onClick={() => setHumaneWindows([...humaneWindows, { start: "09:00", end: "17:00", type: "weekday" }])}
+                  >
+                    + Add Time Window
+                  </button>
+                </div>
+
+                <div style={{ marginTop: '1rem', textAlign: 'right' }}>
+                  <button className="btn-primary" onClick={handleSync}>Save & Sync</button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <WorldClock timezone={timezone} />
+
+                <div className="card">
+                  <h3>Quick Actions</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+                    <button className="btn-primary" onClick={handleCreateGroup}>+ Create New Group</button>
+                    <button className="btn-ghost" onClick={handleJoinGroup}>Join Group by ID</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <h3>Your Groups</h3>
+            <div className="grid-cols-2">
+              {groups.map(g => (
+                <div
+                  key={g.id}
+                  className="card"
+                  style={{ cursor: 'pointer', borderLeft: '4px solid var(--secondary)' }}
+                  onClick={() => { setSelectedGroup(g); setView('groups'); }}
+                >
+                  <h4 style={{ margin: '0 0 0.5rem 0' }}>{g.name}</h4>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {g.id}</div>
+                </div>
+              ))}
+              {groups.length === 0 && (
+                <div style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No groups yet. Create one to get started!</div>
+              )}
+            </div>
           </div>
         )}
 
-        {activeAccount && (
-          <div className="scheduler-layout">
-            <div className="input-section card">
-              <h3>New Meeting</h3>
+        {view === 'groups' && selectedGroup && (
+          <GroupView
+            group={selectedGroup}
+            currentUser={activeAccount}
+            onBack={() => setView('dashboard')}
+            onFindTimes={handleFindTimes}
+            suggestions={suggestions}
+            loading={loading}
+            onBook={handleBookMeeting}
+          />
+        )}
 
-              <div className="form-group">
-                <label>Attendees (comma separated emails)</label>
-                <textarea
-                  value={attendees}
-                  onChange={(e) => setAttendees(e.target.value)}
-                  placeholder="alice@example.com, bob@example.com"
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Date</label>
-                  <input
-                    type="date"
-                    value={meetingDate}
-                    onChange={(e) => setMeetingDate(e.target.value)}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Duration (min)</label>
-                  <select value={duration} onChange={e => setDuration(Number(e.target.value))}>
-                    <option value={30}>30 min</option>
-                    <option value={60}>60 min</option>
-                    <option value={90}>90 min</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                onClick={handleFindTimes}
-                className="btn-primary full-width"
-                disabled={loading}
-              >
-                {loading ? 'Searching...' : 'Find Humane Times'}
-              </button>
-            </div>
-
-            <div className="results-section">
-              {suggestions && suggestions.length === 0 && (
-                <div className="info-message">No common times found in working hours. Try extending the range or changing attendees.</div>
-              )}
-
-              {suggestions && suggestions.length > 0 && (
-                <div className="suggestions-list">
-                  <h3>Suggested Times</h3>
-                  {suggestions.map((slot, index) => (
-                    <div key={index} className="suggestion-card">
-                      <div className="time-display">
-                        <span className="time-primary">{formatTime(slot.meetingTimeSlot.start.dateTime)}</span>
-                        <span className="time-secondary">
-                          {formatTime(slot.meetingTimeSlot.end.dateTime)}
-                        </span>
-                      </div>
-                      <div className="confidence-score">
-                        Match: {Math.round(slot.confidence * 100)}%
-                      </div>
-                      <button className="btn-sm">Select</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        {view === 'groups' && !selectedGroup && (
+          <div style={{ textAlign: 'center', marginTop: '4rem', color: 'var(--text-muted)' }}>
+            Select a group from the dashboard.
+            <br /><br />
+            <button className="btn-ghost" onClick={() => setView('dashboard')}>Go to Dashboard</button>
           </div>
         )}
       </main>

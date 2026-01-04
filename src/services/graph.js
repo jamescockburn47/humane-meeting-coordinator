@@ -76,3 +76,46 @@ export async function findMeetingTimes(accessToken, attendees, startDate, endDat
         .then(response => response.json())
         .catch(error => console.log(error));
 }
+
+/**
+ * Creates a meeting on the user's calendar
+ */
+export async function createMeeting(accessToken, subject, description, startTime, endTime, attendees) {
+    const headers = new Headers();
+    const bearer = `Bearer ${accessToken}`;
+
+    headers.append("Authorization", bearer);
+    headers.append("Content-Type", "application/json");
+
+    const event = {
+        subject: subject,
+        body: {
+            contentType: "HTML",
+            content: description
+        },
+        start: {
+            dateTime: startTime, // ISO String
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        end: {
+            dateTime: endTime, // ISO String
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        attendees: attendees.map(email => ({
+            emailAddress: {
+                address: email,
+                name: email // Graph often resolves name automatically
+            },
+            type: "required"
+        }))
+    };
+
+    return fetch("https://graph.microsoft.com/v1.0/me/events", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(event)
+    }).then(response => {
+        if (!response.ok) throw new Error("Booking failed");
+        return response.json();
+    });
+}
