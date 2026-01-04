@@ -12,7 +12,8 @@ export function Sidebar({
     onGuestJoin,
     calendarConnected,
     onConnectCalendar,
-    isOpen 
+    isOpen,
+    onShowPrivacy
 }) {
     const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'GU';
 
@@ -109,9 +110,9 @@ export function Sidebar({
             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
                 <div
                     className="privacy-badge"
-                    onClick={() => alert("🔒 Privacy Promise:\n\nWe strictly fetch and store 'Busy' intervals (Start/End times) only.\n\nWe DO NOT fetch or store:\n- Event Titles (Subjects)\n- Descriptions\n- Attendees\n- Locations\n\nYour details remain on your device/provider.")}
+                    onClick={onShowPrivacy}
                 >
-                    <span style={{ fontSize: '1rem' }}>🛡️</span> Data Privacy Mode
+                    <span style={{ fontSize: '1rem' }}>🛡️</span> Privacy & Data Protection
                 </div>
             </div>
         </div>

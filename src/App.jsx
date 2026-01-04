@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-import { updateProfile, getProfile, createGroup, joinGroup, getGroupMembers, getBusySlotsForUsers, syncAvailability, supabase } from "./services/supabase";
+import { updateProfile, getProfile, createGroup, joinGroup, getGroupMembers, getBusySlotsForUsers, syncAvailability, supabase, deleteAllUserData, exportUserData } from "./services/supabase";
 import { findCommonHumaneSlots } from './services/scheduler';
 import { callMsGraph, findMeetingTimes, createMeeting } from './services/graph';
 import { fetchGoogleAvailability, createGoogleEvent } from './services/google';
@@ -10,6 +10,7 @@ import { Sidebar } from './components/Sidebar';
 import { GroupView } from './components/GroupView';
 import { WorldClock } from './components/WorldClock';
 import { GuestJoinModal } from './components/GuestJoinModal';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
 
 import './index.css';
 
@@ -24,7 +25,9 @@ function App() {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showGuestModal, setShowGuestModal] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [myBusySlots, setMyBusySlots] = useState([]); // For calendar overlay
 
   // New: Multiple Windows State
   const [humaneWindows, setHumaneWindows] = useState([
@@ -194,6 +197,80 @@ function App() {
     setGoogleAccessToken(null);
     setCalendarConnected(false);
     setGroups([]);
+    setMyBusySlots([]);
+  };
+
+  // Fetch user's busy slots for calendar overlay
+  const fetchMyBusySlots = async () => {
+    if (!calendarConnected || !activeAccount) return;
+    
+    const start = new Date();
+    const end = new Date();
+    end.setDate(end.getDate() + 14);
+
+    try {
+      if (activeAccount.provider === 'google' && googleAccessToken) {
+        const slots = await fetchGoogleAvailability(googleAccessToken, activeAccount.username, start, end);
+        setMyBusySlots(slots);
+      } else if (activeAccount.provider === 'microsoft') {
+        const response = await instance.acquireTokenSilent({
+          ...loginRequest,
+          account: accounts[0]
+        });
+        
+        const graphUrl = `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start.toISOString()}&endDateTime=${end.toISOString()}&$select=start,end`;
+        const fetchRes = await fetch(graphUrl, {
+          headers: { Authorization: `Bearer ${response.accessToken}` }
+        });
+        const data = await fetchRes.json();
+        
+        if (data.value) {
+          const slots = data.value.map(event => ({
+            start: { dateTime: event.start.dateTime },
+            end: { dateTime: event.end.dateTime }
+          }));
+          setMyBusySlots(slots);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch busy slots for overlay:", err);
+    }
+  };
+
+  // Fetch busy slots when calendar is connected
+  useEffect(() => {
+    if (calendarConnected && activeAccount) {
+      fetchMyBusySlots();
+    }
+  }, [calendarConnected, activeAccount]);
+
+  // Delete all user data (GDPR)
+  const handleDeleteAllData = async () => {
+    if (!activeAccount) return;
+    
+    const result = await deleteAllUserData(activeAccount.username);
+    
+    if (result.success) {
+      alert("All your data has been deleted. You will now be logged out.");
+      handleLogout();
+      setShowPrivacyPolicy(false);
+    } else {
+      alert("There was an error deleting some data. Please contact support.");
+    }
+  };
+
+  // Export user data (GDPR)
+  const handleExportData = async () => {
+    if (!activeAccount) return;
+    
+    const data = await exportUserData(activeAccount.username);
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `humane-calendar-data-${activeAccount.username}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // --- ACTIONS ---
@@ -383,6 +460,7 @@ function App() {
         calendarConnected={calendarConnected}
         onConnectCalendar={handleConnectCalendar}
         isOpen={sidebarOpen}
+        onShowPrivacy={() => setShowPrivacyPolicy(true)}
       />
 
       {/* Guest Join Modal */}
@@ -390,6 +468,15 @@ function App() {
         <GuestJoinModal
           onClose={() => setShowGuestModal(false)}
           onJoin={handleGuestJoin}
+        />
+      )}
+
+      {/* Privacy Policy Modal */}
+      {showPrivacyPolicy && (
+        <PrivacyPolicy
+          onClose={() => setShowPrivacyPolicy(false)}
+          onDeleteData={handleDeleteAllData}
+          userEmail={activeAccount?.username}
         />
       )}
 
@@ -480,6 +567,48 @@ function App() {
                     + Add Time Window
                   </button>
                 </div>
+
+                {/* Calendar Conflicts Overlay */}
+                {calendarConnected && myBusySlots.length > 0 && (
+                  <div className="busy-times-overlay">
+                    <h4>📅 Your Upcoming Busy Times</h4>
+                    {myBusySlots.slice(0, 5).map((slot, idx) => {
+                      const start = new Date(slot.start.dateTime);
+                      const end = new Date(slot.end.dateTime);
+                      return (
+                        <div key={idx} className="busy-slot">
+                          <span>{start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                          <span>•</span>
+                          <span>{start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      );
+                    })}
+                    {myBusySlots.length > 5 && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                        + {myBusySlots.length - 5} more busy slots
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Prompt to connect calendar for guests */}
+                {activeAccount && !calendarConnected && (
+                  <div className="sync-prompt" style={{ marginTop: '1rem' }}>
+                    <span className="sync-icon">📅</span>
+                    <div className="sync-prompt-text">
+                      <strong>See your calendar conflicts</strong>
+                      <p>Connect your calendar to avoid double-booking.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-connect" onClick={() => handleConnectCalendar('microsoft')}>
+                        Microsoft
+                      </button>
+                      <button className="btn-connect" onClick={() => handleConnectCalendar('google')}>
+                        Google
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ marginTop: '1rem', textAlign: 'right' }}>
                   <button className="btn-primary" onClick={handleSync}>Save & Sync</button>

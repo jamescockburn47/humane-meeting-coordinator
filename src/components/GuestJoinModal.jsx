@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export function GuestJoinModal({ onClose, onJoin }) {
+export function GuestJoinModal({ onClose, onJoin, busySlots = [], onConnectCalendar }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [groupCode, setGroupCode] = useState('');
@@ -8,6 +8,7 @@ export function GuestJoinModal({ onClose, onJoin }) {
   const [windows, setWindows] = useState([
     { start: "09:00", end: "17:00", type: "weekday" }
   ]);
+  const [showCalendarPrompt, setShowCalendarPrompt] = useState(true);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -140,9 +141,27 @@ export function GuestJoinModal({ onClose, onJoin }) {
           </div>
         </form>
 
+        {showCalendarPrompt && (
+          <div className="sync-prompt">
+            <span className="sync-icon">📅</span>
+            <div className="sync-prompt-text">
+              <strong>Optional: See your calendar conflicts</strong>
+              <p>Connect your calendar to see your busy times while setting availability.</p>
+            </div>
+            <button 
+              type="button"
+              className="btn-ghost" 
+              style={{ fontSize: '0.75rem' }}
+              onClick={() => setShowCalendarPrompt(false)}
+            >
+              Skip
+            </button>
+          </div>
+        )}
+
         <div className="calendar-note">
-          <span className="info-icon">ℹ️</span>
-          You can connect your calendar later for automatic availability sync.
+          <span className="info-icon">🔒</span>
+          <span>We only access busy/free times. Event details remain private.</span>
         </div>
       </div>
     </div>

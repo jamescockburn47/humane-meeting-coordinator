@@ -183,3 +183,70 @@ export async function getGroupDetails(groupId) {
     if (error) return null;
     return data;
 }
+
+/**
+ * Deletes all user data (GDPR Right to Erasure)
+ * This removes: profile, group memberships, and availability cache
+ */
+export async function deleteAllUserData(email) {
+    console.log("Deleting all data for:", email);
+    
+    // 1. Delete availability cache
+    const { error: cacheError } = await supabase
+        .from('availability_cache')
+        .delete()
+        .eq('profile_email', email);
+    
+    if (cacheError) console.error("Error deleting availability cache:", cacheError);
+
+    // 2. Delete group memberships
+    const { error: memberError } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('profile_email', email);
+    
+    if (memberError) console.error("Error deleting group memberships:", memberError);
+
+    // 3. Delete profile
+    const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('email', email);
+    
+    if (profileError) console.error("Error deleting profile:", profileError);
+
+    return { 
+        success: !cacheError && !memberError && !profileError,
+        errors: { cacheError, memberError, profileError }
+    };
+}
+
+/**
+ * Export user data (GDPR Right to Portability)
+ */
+export async function exportUserData(email) {
+    const profile = await getProfile(email);
+    
+    const { data: memberships } = await supabase
+        .from('group_members')
+        .select('group_id, is_admin, groups(name)')
+        .eq('profile_email', email);
+
+    const { data: availability } = await supabase
+        .from('availability_cache')
+        .select('start_time, end_time, created_at')
+        .eq('profile_email', email);
+
+    return {
+        exportDate: new Date().toISOString(),
+        profile: profile ? {
+            email: profile.email,
+            display_name: profile.display_name,
+            timezone: profile.timezone,
+            humane_windows: profile.humane_windows,
+            last_synced_at: profile.last_synced_at
+        } : null,
+        groupMemberships: memberships || [],
+        availabilitySlots: availability || []
+    };
+}
