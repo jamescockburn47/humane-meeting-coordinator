@@ -136,7 +136,7 @@ function App() {
       await updateProfile(googleUser.username, googleUser.name, timezone, "09:00", "17:00", humaneWindows);
       fetchMyGroups(googleUser.username);
     },
-    scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events'
+    scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
   });
 
   // Guest login (no calendar integration)

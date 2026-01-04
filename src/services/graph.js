@@ -116,10 +116,17 @@ export async function createMeeting(accessToken, subject, description, startTime
         // Request responses from attendees
         responseRequested: true,
         // Create a Teams meeting link automatically
+        // teamsForBusiness = Microsoft 365 accounts
+        // teamsForConsumer = Personal Microsoft accounts
+        // The API will fall back gracefully if Teams isn't available
         isOnlineMeeting: true,
         onlineMeetingProvider: "teamsForBusiness",
-        // Allow forwarding
-        allowNewTimeProposals: true
+        // Allow attendees to propose new times
+        allowNewTimeProposals: true,
+        // Reminder 15 minutes before
+        reminderMinutesBeforeStart: 15,
+        // Show as busy
+        showAs: "busy"
     };
 
     const response = await fetch("https://graph.microsoft.com/v1.0/me/events", {
