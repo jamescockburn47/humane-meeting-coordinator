@@ -116,10 +116,19 @@ export async function createGoogleEvent(accessToken, subject, description, start
     if (!response.ok) {
         const errorText = await response.text();
         console.error("Google Event Creation Failed:", errorText);
+        console.error("This usually means:");
+        console.error("  1. Your Google OAuth token expired - try logging out and back in");
+        console.error("  2. Calendar API is not enabled in Google Cloud Console");
+        console.error("  3. Missing calendar.events scope");
         throw new Error("Failed to create Google Event: " + errorText);
     }
 
     const result = await response.json();
-    console.log("Google Event Created:", result.htmlLink);
+    console.log("=== GOOGLE EVENT CREATED SUCCESSFULLY ===");
+    console.log("Event Link:", result.htmlLink);
+    console.log("Organizer:", result.organizer?.email || 'You');
+    console.log("Attendees:", result.attendees?.map(a => a.email).join(', '));
+    console.log("Meet Link:", result.conferenceData?.entryPoints?.[0]?.uri || 'None');
+    console.log("==========================================");
     return result;
 }
