@@ -205,7 +205,6 @@ export function JoinGroupPage({
             <div className="join-page">
                 <div className="join-card">
                     <div className="join-error">
-                        <span className="error-icon">❌</span>
                         <h2>Link Not Found</h2>
                         <p>This invite link may have expired or the group no longer exists.</p>
                         <p className="error-suggestion">Please ask the group organizer to send you a new link.</p>
@@ -232,7 +231,7 @@ export function JoinGroupPage({
                 <div className="group-preview">
                     <h2>{group.name}</h2>
                     <div className="group-meta">
-                        <span>👥 {members.length} {members.length === 1 ? 'member' : 'members'}</span>
+                        <span>{members.length} {members.length === 1 ? 'member' : 'members'}</span>
                         {group.created_by && <span>Created by {group.created_by.split('@')[0]}</span>}
                     </div>
                     
@@ -251,7 +250,7 @@ export function JoinGroupPage({
                                 )}
                                 {meetingRequest.from && meetingRequest.to && (
                                     <span className="request-item">
-                                        📅 {new Date(meetingRequest.from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        {new Date(meetingRequest.from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                         {' → '}
                                         {new Date(meetingRequest.to).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </span>
@@ -289,7 +288,7 @@ export function JoinGroupPage({
                             className="btn-primary btn-large" 
                             onClick={() => onJoinSuccess(group)}
                         >
-                            📅 View Group & Meetings
+                            View Group & Meetings
                         </button>
                         <button 
                             className="btn-secondary btn-large" 
@@ -494,7 +493,7 @@ export function JoinGroupPage({
                         </button>
 
                         <p className="privacy-note">
-                            🔒 We only access your busy/free times. Event details remain private.
+                            We only access your busy/free times. Event details remain private.
                         </p>
                     </div>
                 )}

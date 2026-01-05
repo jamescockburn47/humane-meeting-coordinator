@@ -36,7 +36,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, du
     const handleWhatsApp = () => {
         const dateInfo = formatDateRange();
         const durationInfo = duration ? ` for a ${duration}-minute meeting` : '';
-        const msg = `Hey! Join my scheduling group "${groupName}"${durationInfo}${dateInfo}:\n\n${inviteUrl}\n\nSet your availability so we can find a time that works for everyone! 📅`;
+        const msg = `Hey! Join my scheduling group "${groupName}"${durationInfo}${dateInfo}:\n\n${inviteUrl}\n\nSet your availability so we can find a time that works for everyone.`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
@@ -68,7 +68,6 @@ function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, du
     return (
         <div className="invite-link-card">
             <div className="invite-link-header">
-                <span className="invite-icon">🔗</span>
                 <div>
                     <h4>Invite Link</h4>
                     <p>Share this link with anyone you want to join</p>
@@ -99,7 +98,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, du
                     className={`btn-copy-link ${copied ? 'copied' : ''}`}
                     onClick={handleCopy}
                 >
-                    {copied ? '✓ Copied!' : '📋 Copy'}
+                    {copied ? 'Copied!' : 'Copy'}
                 </button>
             </div>
 
@@ -119,7 +118,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, du
             </div>
 
             <p className="invite-note">
-                💡 Each person can use the same link to join. No limit!
+                Each person can use the same link to join.
             </p>
         </div>
     );
@@ -159,7 +158,7 @@ function SlotCard({ slot, onClick, members, showPartial = false }) {
             {showPartial && slot.unavailableMembers?.length > 0 && (
                 <div className="slot-attendance-detail">
                     <div className="unavailable-list">
-                        <span className="label">❌ Can't attend:</span>
+                        <span className="label">Can't attend:</span>
                         {slot.unavailableMembers.map((m, i) => (
                             <span key={i} className="member-chip unavailable" title={m.reason}>
                                 {m.name}
@@ -381,7 +380,6 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
             {suggestions.filter(s => s.isFullMatch).length > 0 && (
                 <div className="slots-section">
                     <h4 className="slots-section-title">
-                        <span className="section-icon">✅</span>
                         Everyone Available ({suggestions.filter(s => s.isFullMatch).length} times)
                     </h4>
                     <div className="grid-cols-2">
@@ -396,7 +394,6 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
             {suggestions.filter(s => !s.isFullMatch).length > 0 && (
                 <div className="slots-section partial-section">
                     <h4 className="slots-section-title">
-                        <span className="section-icon">⚠️</span>
                         Partial Availability ({suggestions.filter(s => !s.isFullMatch).length} times)
                         <span className="section-subtitle">Some members unavailable</span>
                     </h4>
@@ -428,7 +425,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                                 setEndDate(newEnd.toISOString().split('T')[0]);
                             }}
                         >
-                            📅 Expand Date Range (+7 days)
+                            Expand Date Range (+7 days)
                         </button>
                     </div>
                 </div>

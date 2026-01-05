@@ -33,18 +33,17 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
             <div className="modal-content booking-modal" onClick={e => e.stopPropagation()}>
                 <button className="modal-close" onClick={onCancel} disabled={processing}>×</button>
                 
-                <h2>📅 Send Meeting Invites</h2>
+                <h2>Send Meeting Invites</h2>
                 
                 {/* Partial Match Warning */}
                 {isPartialMatch && (
                     <div className="partial-match-warning">
                         <div className="warning-header">
-                            <span className="warning-icon">⚠️</span>
                             <span>Not everyone is available at this time</span>
                         </div>
                         <div className="availability-summary">
                             <div className="available-group">
-                                <span className="group-label">✅ Available ({availableMembers.length}):</span>
+                                <span className="group-label">Available ({availableMembers.length}):</span>
                                 <div className="member-chips">
                                     {availableMembers.map((m, i) => (
                                         <span key={i} className="mini-chip available">{m.name}</span>
@@ -52,7 +51,7 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
                                 </div>
                             </div>
                             <div className="unavailable-group">
-                                <span className="group-label">❌ Unavailable ({unavailableMembers.length}):</span>
+                                <span className="group-label">Unavailable ({unavailableMembers.length}):</span>
                                 <div className="member-chips">
                                     {unavailableMembers.map((m, i) => (
                                         <span key={i} className="mini-chip unavailable" title={m.reason}>
@@ -215,7 +214,6 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
 
                     {hostProvider === 'guest' && (
                         <div className="guest-booking-note">
-                            <span>💡</span>
                             <span>As a guest, download the .ics file and share it with attendees, or connect your Google/Microsoft calendar to send invites directly.</span>
                         </div>
                     )}

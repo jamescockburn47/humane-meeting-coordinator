@@ -143,7 +143,6 @@ export function GuestJoinModal({ onClose, onJoin, busySlots = [], onConnectCalen
 
         {showCalendarPrompt && (
           <div className="sync-prompt">
-            <span className="sync-icon">📅</span>
             <div className="sync-prompt-text">
               <strong>Optional: See your calendar conflicts</strong>
               <p>Connect your calendar to see your busy times while setting availability.</p>
@@ -160,7 +159,6 @@ export function GuestJoinModal({ onClose, onJoin, busySlots = [], onConnectCalen
         )}
 
         <div className="calendar-note">
-          <span className="info-icon">🔒</span>
           <span>We only access busy/free times. Event details remain private.</span>
         </div>
       </div>

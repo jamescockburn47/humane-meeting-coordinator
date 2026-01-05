@@ -795,23 +795,22 @@ function App() {
             {!activeAccount && (
               <div className="hero-section">
                 <h1 className="hero-title">
-                  The Only Scheduler That <span className="hero-highlight">Asks Before It Books</span>
+                  Schedule Across Timezones.<br />
+                  <span className="hero-highlight">Respect Everyone's Hours.</span>
                 </h1>
                 <p className="hero-subtitle">
-                  Everyone picks their own times. We find the overlap. The meeting books itself.
+                  Each person picks when they're actually free — in their own timezone. 
+                  You see the overlap and send the invite.
                 </p>
                 <div className="hero-features">
                   <div className="hero-feature">
-                    <span className="hero-icon">🎨</span>
-                    <span>Invitees set their own hours</span>
+                    Invitees choose their own slots
                   </div>
                   <div className="hero-feature">
-                    <span className="hero-icon">🔒</span>
-                    <span>No creepy calendar access</span>
+                    Times shown in local hours
                   </div>
                   <div className="hero-feature">
-                    <span className="hero-icon">📹</span>
-                    <span>Auto-generates video links</span>
+                    One-click calendar invite with video link
                   </div>
                 </div>
                 <div className="hero-cta">

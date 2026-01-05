@@ -128,15 +128,11 @@ body {
 }
 
 .hero-feature {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   font-size: 0.9rem;
-  color: var(--text-main);
-}
-
-.hero-icon {
-  font-size: 1.25rem;
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
 }
 
 .hero-cta {
