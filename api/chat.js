@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+import { generateText } from 'ai';
+import { google } from '@ai-sdk/google';
 
 // Build system prompt with context
 function buildSystemPrompt(context) {
@@ -98,7 +99,7 @@ STRICT RULES:
             prompt += `\n- Explain they can click on a time slot to see the booking form`;
         } else if (partialMatches.length > 0) {
             prompt += `\n- Explain that no time works for everyone`;
-            if (Object.keys(blockerCount || {}).length > 0) {
+            if (sortedBlockers?.length > 0) {
                 const topBlocker = sortedBlockers[0];
                 prompt += `\n- Suggest asking ${topBlocker[0]} if they can adjust their availability`;
                 prompt += `\n- Or suggest the organiser expands the date range`;
@@ -161,62 +162,42 @@ export default async function handler(req, res) {
     try {
         const { messages, context } = req.body;
 
-        const apiKey = process.env.GEMINI_API_KEY;
+        // Check for API key (GOOGLE_GENERATIVE_AI_API_KEY is the standard name for @ai-sdk/google)
+        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
 
         if (!apiKey) {
-            console.error("No GEMINI_API_KEY found in environment");
+            console.error("No GOOGLE_GENERATIVE_AI_API_KEY or GEMINI_API_KEY found in environment");
             return res.status(500).json({ error: "API key not configured" });
         }
-
-        const ai = new GoogleGenAI({ apiKey });
 
         // Build dynamic system prompt with context
         const systemPrompt = buildSystemPrompt(context);
 
-        // Build conversation for Gemini
-        let conversationText = systemPrompt + "\n\n---\n\nConversation:\n";
+        // Build conversation messages
+        const conversationMessages = messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+        }));
 
-        for (const msg of messages) {
-            const role = msg.role === "user" ? "User" : "Assistant";
-            conversationText += `${role}: ${msg.content}\n`;
-        }
-
-        conversationText += "Assistant:";
-
-        // Try models in order of preference (cheapest/fastest first)
-        const modelNames = [
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro"
-        ];
-
-        let response = null;
-        let lastError = null;
-
-        for (const modelName of modelNames) {
-            try {
-                console.log(`Trying model: ${modelName}`);
-                response = await ai.models.generateContent({
-                    model: modelName,
-                    contents: conversationText,
-                });
-                console.log(`Success with model: ${modelName}`);
-                break;
-            } catch (err) {
-                console.error(`Model ${modelName} failed:`, err.message);
-                lastError = err;
-            }
-        }
-
-        if (!response) {
-            throw lastError || new Error("All models failed");
-        }
-
-        const text = response.text || "";
+        // Use Vercel AI SDK with Google provider
+        const { text } = await generateText({
+            model: google('gemini-2.0-flash', { apiKey }),
+            system: systemPrompt,
+            messages: conversationMessages,
+        });
 
         return res.status(200).json({ response: text });
     } catch (error) {
         console.error("Chat API error:", error.message);
+        
+        // Provide more specific error messages
+        if (error.message?.includes('API key')) {
+            return res.status(500).json({ error: "Invalid API key" });
+        }
+        if (error.message?.includes('quota')) {
+            return res.status(429).json({ error: "API quota exceeded" });
+        }
+        
         return res.status(500).json({
             error: error.message || "Unknown error occurred"
         });
