@@ -15,6 +15,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { JoinGroupPage } from './components/JoinGroupPage';
 import { HowItWorks } from './components/HowItWorks';
 import { SchedulingAssistant } from './components/SchedulingAssistant';
+import { AvailabilityWizard } from './components/AvailabilityWizard';
 
 import './index.css';
 
@@ -45,6 +46,7 @@ function App() {
 
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [nightOwl, setNightOwl] = useState(false); // Allow midnight-6am slots
+  const [showAvailabilityWizard, setShowAvailabilityWizard] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Idle");
 
   const [loading, setLoading] = useState(false);
@@ -872,90 +874,116 @@ function App() {
                   </datalist>
                 </div>
 
-                <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>Your Availability Windows</label>
-
-                  {humaneWindows.map((win, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <select
-                        value={win.type}
-                        onChange={(e) => {
-                          const newWins = [...humaneWindows];
-                          newWins[idx].type = e.target.value;
-                          setHumaneWindows(newWins);
-                        }}
-                        style={{ width: '170px', fontSize: '0.8rem' }}
-                      >
-                        <option value="weekday">Weekdays (Mon-Fri)</option>
-                        <option value="weekend">Weekends (Sat-Sun)</option>
-                        <option value="me_workday">Sun-Thu (Mid. East)</option>
-                        <option value="me_weekend">Fri-Sat (Mid. East)</option>
-                        <option value="everyday">Every Day</option>
-                      </select>
-                      <input
-                        type="time"
-                        value={win.start}
-                        onChange={e => {
-                          const newWins = [...humaneWindows];
-                          newWins[idx].start = e.target.value;
-                          setHumaneWindows(newWins);
-                        }}
-                        style={{ flex: 1 }}
-                      />
-                      <span style={{ color: 'var(--text-muted)' }}>-</span>
-                      <input
-                        type="time"
-                        value={win.end}
-                        onChange={e => {
-                          const newWins = [...humaneWindows];
-                          newWins[idx].end = e.target.value;
-                          setHumaneWindows(newWins);
-                        }}
-                        style={{ flex: 1 }}
-                      />
+                {/* Show wizard or manual editor */}
+                {showAvailabilityWizard ? (
+                  <AvailabilityWizard
+                    onComplete={(windows) => {
+                      setHumaneWindows(windows);
+                      setShowAvailabilityWizard(false);
+                    }}
+                    onCancel={() => setShowAvailabilityWizard(false)}
+                  />
+                ) : (
+                  <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>Your Availability Windows</label>
                       <button
-                        className="btn-ghost"
-                        style={{ padding: '0 0.5rem', color: '#ff4444' }}
-                        onClick={() => {
-                          const newWins = humaneWindows.filter((_, i) => i !== idx);
-                          setHumaneWindows(newWins);
+                        onClick={() => setShowAvailabilityWizard(true)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
                         }}
                       >
-                        ×
+                        Try Quick Setup
                       </button>
                     </div>
-                  ))}
 
-                  <button
-                    className="btn-ghost"
-                    style={{ fontSize: '0.8rem', marginTop: '0.5rem', border: '1px dashed var(--border)', width: '100%' }}
-                    onClick={() => setHumaneWindows([...humaneWindows, { start: "09:00", end: "17:00", type: "weekday" }])}
-                  >
-                    + Add Time Window
-                  </button>
+                    {humaneWindows.map((win, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <select
+                          value={win.type}
+                          onChange={(e) => {
+                            const newWins = [...humaneWindows];
+                            newWins[idx].type = e.target.value;
+                            setHumaneWindows(newWins);
+                          }}
+                          style={{ width: '170px', fontSize: '0.8rem' }}
+                        >
+                          <option value="weekday">Weekdays (Mon-Fri)</option>
+                          <option value="weekend">Weekends (Sat-Sun)</option>
+                          <option value="me_workday">Sun-Thu (Mid. East)</option>
+                          <option value="me_weekend">Fri-Sat (Mid. East)</option>
+                          <option value="everyday">Every Day</option>
+                        </select>
+                        <input
+                          type="time"
+                          value={win.start}
+                          onChange={e => {
+                            const newWins = [...humaneWindows];
+                            newWins[idx].start = e.target.value;
+                            setHumaneWindows(newWins);
+                          }}
+                          style={{ flex: 1 }}
+                        />
+                        <span style={{ color: 'var(--text-muted)' }}>-</span>
+                        <input
+                          type="time"
+                          value={win.end}
+                          onChange={e => {
+                            const newWins = [...humaneWindows];
+                            newWins[idx].end = e.target.value;
+                            setHumaneWindows(newWins);
+                          }}
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          className="btn-ghost"
+                          style={{ padding: '0 0.5rem', color: '#ff4444' }}
+                          onClick={() => {
+                            const newWins = humaneWindows.filter((_, i) => i !== idx);
+                            setHumaneWindows(newWins);
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
 
-                  {/* Night Owl Preference */}
-                  <label 
-                    className="night-owl-toggle"
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem', 
-                      marginTop: '1rem',
-                      fontSize: '0.85rem',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={nightOwl}
-                      onChange={(e) => setNightOwl(e.target.checked)}
-                      style={{ width: '16px', height: '16px' }}
-                    />
-                    <span>Include overnight slots (midnight-6am)</span>
-                  </label>
-                </div>
+                    <button
+                      className="btn-ghost"
+                      style={{ fontSize: '0.8rem', marginTop: '0.5rem', border: '1px dashed var(--border)', width: '100%' }}
+                      onClick={() => setHumaneWindows([...humaneWindows, { start: "09:00", end: "17:00", type: "weekday" }])}
+                    >
+                      + Add Time Window
+                    </button>
+
+                    {/* Night Owl Preference */}
+                    <label 
+                      className="night-owl-toggle"
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        marginTop: '1rem',
+                        fontSize: '0.85rem',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={nightOwl}
+                        onChange={(e) => setNightOwl(e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      <span>Include overnight slots (midnight-6am)</span>
+                    </label>
+                  </div>
+                )}
 
                 {/* Calendar Conflicts Overlay */}
                 {calendarConnected && myBusySlots.length > 0 && (
