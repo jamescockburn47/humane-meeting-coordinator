@@ -176,8 +176,14 @@ export function JoinGroupPage({
             return;
         }
 
-        // Store guest session
-        localStorage.setItem('guestEmail', guestEmail);
+        // Store guest session for persistence
+        const guestUser = {
+            username: guestEmail,
+            name: guestName,
+            provider: 'guest'
+        };
+        localStorage.setItem('userSession', JSON.stringify(guestUser));
+        localStorage.setItem('guestEmail', guestEmail); // Backwards compatibility
         
         onJoinSuccess(result.group, {
             username: guestEmail,

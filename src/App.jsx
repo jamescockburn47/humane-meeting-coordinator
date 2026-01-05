@@ -85,6 +85,47 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // PERSISTENT LOGIN: Restore session from localStorage on page load
+  useEffect(() => {
+    const restoreSession = async () => {
+      const savedSession = localStorage.getItem('userSession');
+      if (savedSession) {
+        try {
+          const session = JSON.parse(savedSession);
+          // Verify profile still exists in Supabase
+          const profile = await getProfile(session.username);
+          if (profile) {
+            setActiveAccount({
+              username: session.username,
+              name: session.name || profile.display_name,
+              provider: session.provider
+            });
+            if (profile.humane_windows && profile.humane_windows.length > 0) {
+              setHumaneWindows(profile.humane_windows);
+            }
+            if (profile.timezone) setTimezone(profile.timezone);
+            if (profile.night_owl !== undefined) setNightOwl(profile.night_owl);
+            // Calendar is connected if they logged in with OAuth provider
+            setCalendarConnected(session.provider === 'microsoft' || session.provider === 'google');
+            fetchMyGroups(session.username);
+          } else {
+            // Profile gone, clear session
+            localStorage.removeItem('userSession');
+            localStorage.removeItem('guestEmail');
+          }
+        } catch {
+          localStorage.removeItem('userSession');
+        }
+      }
+    };
+    
+    // Only restore if no account is set
+    if (!activeAccount && accounts.length === 0) {
+      restoreSession();
+    }
+  }, []);
+
+  // Handle Microsoft MSAL login (save session after successful login)
   useEffect(() => {
     const acc = accounts[0];
     if (acc) {
@@ -95,6 +136,9 @@ function App() {
       };
       setActiveAccount(msAccount);
       setCalendarConnected(true);
+      
+      // Save session to localStorage for persistence
+      localStorage.setItem('userSession', JSON.stringify(msAccount));
       
       // Fetch Profile Logic - load saved preferences
       getProfile(acc.username).then(profile => {
@@ -118,32 +162,6 @@ function App() {
         }
       });
       fetchMyGroups(acc.username);
-    }
-  }, [accounts]);
-
-  // Load guest session from Supabase (only email stored in localStorage)
-  useEffect(() => {
-    const guestEmail = localStorage.getItem('guestEmail');
-    if (guestEmail && !activeAccount && accounts.length === 0) {
-      // Fetch full profile from Supabase
-      getProfile(guestEmail).then(profile => {
-        if (profile) {
-          const guestUser = {
-            username: profile.email,
-            name: profile.display_name,
-            provider: 'guest'
-          };
-          setActiveAccount(guestUser);
-          if (profile.humane_windows && profile.humane_windows.length > 0) {
-            setHumaneWindows(profile.humane_windows);
-          }
-          if (profile.timezone) setTimezone(profile.timezone);
-          fetchMyGroups(profile.email);
-        } else {
-          // Profile not found in Supabase, clear local session
-          localStorage.removeItem('guestEmail');
-        }
-      });
     }
   }, [accounts]);
 
@@ -178,6 +196,9 @@ function App() {
       };
 
       setActiveAccount(googleUser);
+      
+      // Save session to localStorage for persistence
+      localStorage.setItem('userSession', JSON.stringify(googleUser));
 
       // Check if profile exists - load saved preferences or create new
       const existingProfile = await getProfile(googleUser.username);
@@ -227,8 +248,9 @@ function App() {
       provider: 'guest'
     };
 
-    // Only store email in localStorage as session identifier
-    localStorage.setItem('guestEmail', guestData.email);
+    // Save session to localStorage for persistence
+    localStorage.setItem('userSession', JSON.stringify(guestUser));
+    localStorage.setItem('guestEmail', guestData.email); // Keep for backwards compatibility
 
     setActiveAccount(guestUser);
     setHumaneWindows(guestData.windows);
@@ -256,7 +278,8 @@ function App() {
   const handleLogout = async () => {
     const provider = activeAccount?.provider;
     
-    // Clear local state first
+    // Clear all local session data
+    localStorage.removeItem('userSession');
     localStorage.removeItem('guestEmail');
     setActiveAccount(null);
     setGoogleAccessToken(null);
@@ -268,8 +291,8 @@ function App() {
     if (provider === 'microsoft') {
       try {
         await instance.logoutPopup();
-      } catch (e) {
-        console.log("Microsoft logout:", e);
+      } catch {
+        console.log("Microsoft logout cancelled or failed");
       }
     } else if (provider === 'google') {
       // Google OAuth tokens are session-only, just clearing state is enough
