@@ -1,5 +1,6 @@
 import { generateText, tool } from 'ai';
 import { google } from '@ai-sdk/google';
+import { anthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 
 /**
@@ -706,10 +707,15 @@ export default async function handler(req, res) {
         // Determine if this is an organiser (full agent) or attendee (simple chat)
         const isOrganiser = role === 'organiser';
 
-        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+        // Check for API keys - prefer Claude, fallback to Gemini
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        const geminiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+        
+        const useClaudde = !!anthropicKey;
+        const apiKey = anthropicKey || geminiKey;
 
         if (!apiKey) {
-            console.error("No API key found");
+            console.error("No API key found (need ANTHROPIC_API_KEY or GEMINI_API_KEY)");
             return res.status(500).json({ error: "API key not configured" });
         }
 
@@ -718,12 +724,20 @@ export default async function handler(req, res) {
             content: msg.content
         }));
 
+        // Select model - Claude 3.5 Haiku preferred, Gemini 2.0 Flash fallback
+        const getModel = () => {
+            if (useClaudde) {
+                return anthropic('claude-3-5-haiku-latest'); // Fast, smart, reliable
+            }
+            return google('gemini-2.0-flash-001', { apiKey: geminiKey }); // Stable Gemini fallback
+        };
+
         if (isOrganiser) {
-            // ORGANISER: Full AI Agent with Gemini 3 Flash and tools
+            // ORGANISER: Full AI Agent with tools
             const systemPrompt = buildSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-3-flash', { apiKey }), // Gemini 3 Flash - latest, fast, supports tools
+                model: getModel(),
                 system: systemPrompt,
                 messages: conversationMessages,
                 tools,
@@ -799,11 +813,11 @@ export default async function handler(req, res) {
             });
 
         } else {
-            // ATTENDEE: Simple chat with Gemini 3 Flash (same model for consistency)
+            // ATTENDEE: Simple chat (same model for consistency)
             const systemPrompt = buildAttendeeSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-3-flash', { apiKey }), // Gemini 3 Flash for attendees too
+                model: getModel(),
                 system: systemPrompt,
                 messages: conversationMessages
                 // No tools for attendees - simpler experience
