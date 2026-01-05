@@ -32,8 +32,11 @@ export function Sidebar({
 
     return (
         <div className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
-            <div className="brand" style={{ justifyContent: 'center', marginBottom: '2rem' }}>
+            <div className="brand" style={{ justifyContent: 'center', marginBottom: '1rem' }}>
                 <img src="/logo.png" alt="Logo" style={{ height: '64px', width: 'auto' }} />
+            </div>
+            <div className="brand-tagline">
+                Your time. Your terms.
             </div>
 
             <nav className="nav-menu">

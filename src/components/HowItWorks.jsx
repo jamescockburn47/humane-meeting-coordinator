@@ -9,129 +9,178 @@ export function HowItWorks({ isStandalone = false, onClose }) {
             </div>
 
             <p className="how-intro">
-                Humane Calendar finds meeting times that <strong>respect everyone's working hours</strong> across timezones. 
-                No more 6 AM calls for someone just because it's convenient for you.
+                <strong>You set the rules. We find the match.</strong>
+                <br /><br />
+                Standard schedulers assume that if your calendar is empty, you're available. 
+                We know that's not true—especially for side projects and global teams.
             </p>
 
-            {/* Step 1 */}
+            {/* The Problem */}
+            <div className="how-section problem-section">
+                <h3>❌ The Problem with "Smart" Schedulers</h3>
+                <p>
+                    Tools like Calendly, Reclaim, and Outlook scan your calendar and assume 
+                    <strong> empty = available</strong>. But just because you're "free" at 6 AM 
+                    doesn't mean you <em>want</em> to meet then.
+                </p>
+                <p>
+                    Doodle lets hosts pick a few time slots and asks everyone to vote—but what if 
+                    <strong> none of those options work</strong>? You're back to email ping-pong.
+                </p>
+            </div>
+
+            {/* Step 1 - Active Consent */}
             <div className="how-section">
                 <div className="step-number">1</div>
                 <div className="step-content">
-                    <h3>🔐 Sign In (Organizer Only)</h3>
+                    <h3>🎨 Invitees Define Their Own "Go Zones"</h3>
                     <p>
-                        As the meeting organizer, sign in with <strong>Google</strong> or <strong>Microsoft</strong>. 
-                        This allows Humane Calendar to:
+                        Instead of the host guessing random times, <strong>Humane Calendar</strong> asks 
+                        each participant to highlight the windows that actually work for them.
                     </p>
-                    <ul>
-                        <li>See when you're busy (not <em>what</em> you're doing)</li>
-                        <li>Create calendar events on your behalf</li>
-                        <li>Send invites to participants</li>
-                        <li>Generate <strong>Google Meet</strong> or <strong>Teams</strong> links automatically</li>
-                    </ul>
-                    <div className="step-note">
-                        💡 <strong>Guests don't need to sign in</strong> — they can just share their availability manually.
+                    <div className="example-scenarios">
+                        <div className="scenario">
+                            <span className="scenario-icon">🌅</span>
+                            <p>Happy to hop on a call at 6 AM before the kids wake up? <strong>Mark it green.</strong></p>
+                        </div>
+                        <div className="scenario">
+                            <span className="scenario-icon">🌙</span>
+                            <p>Prefer to keep evenings strictly offline? <strong>Leave it blank.</strong></p>
+                        </div>
+                        <div className="scenario">
+                            <span className="scenario-icon">🌍</span>
+                            <p>Different hours for different days? <strong>Set multiple windows.</strong></p>
+                        </div>
+                    </div>
+                    <div className="step-note highlight">
+                        💡 <strong>You are in control, not the algorithm.</strong>
                     </div>
                 </div>
             </div>
 
-            {/* Step 2 */}
+            {/* Step 2 - Privacy */}
             <div className="how-section">
                 <div className="step-number">2</div>
                 <div className="step-content">
-                    <h3>👥 Create a Scheduling Group</h3>
+                    <h3>🔒 Privacy by Design (No "Creepy" Access)</h3>
                     <p>
-                        Create a group for your meeting (e.g., "Project Kickoff" or "Weekly Sync"). 
-                        Set your <strong>preferred date range</strong> and <strong>meeting duration</strong>.
+                        Because invitees <strong>proactively select</strong> their slots, we don't need 
+                        invasive access to scour your entire calendar history.
                     </p>
-                    <div className="example-box">
-                        <code>humanecalendar.com/join/ABC123?from=2026-01-10&to=2026-01-17&dur=60</code>
-                        <p>The link includes your meeting preferences automatically!</p>
+                    <ul>
+                        <li>You share only the windows you want us to see for <em>this specific meeting</em></li>
+                        <li>Your dentist appointments and private notes remain 100% invisible</li>
+                        <li>No event titles, descriptions, or attendee lists are ever accessed</li>
+                        <li>Calendar connection is <strong>optional</strong> for invitees</li>
+                    </ul>
+                    <div className="privacy-highlight">
+                        <span className="shield-icon">🛡️</span>
+                        <p>
+                            <strong>"We don't track your life; we only process the time slots you explicitly hand to us."</strong>
+                        </p>
                     </div>
-                    <p>
-                        Share via <strong>WhatsApp, Email, Slack</strong>, or any messaging app. 
-                        Each person uses the same link to join.
-                    </p>
                 </div>
             </div>
 
-            {/* Step 3 */}
+            {/* Step 3 - Auto Booking */}
             <div className="how-section">
                 <div className="step-number">3</div>
                 <div className="step-content">
-                    <h3>🌍 Everyone Sets Their "Humane Hours"</h3>
+                    <h3>⚡ Instant Consensus & Auto-Booking</h3>
                     <p>
-                        Each participant defines when they're willing to meet — their <strong>Humane Hours</strong>. 
-                        This is timezone-aware, so everyone sets times in their local timezone.
-                    </p>
-                    <div className="hours-example">
-                        <div className="hours-row">
-                            <span className="hours-person">🇬🇧 Sarah (London)</span>
-                            <span className="hours-times">9:00 AM - 5:00 PM weekdays</span>
-                        </div>
-                        <div className="hours-row">
-                            <span className="hours-person">🇺🇸 Mike (New York)</span>
-                            <span className="hours-times">10:00 AM - 6:00 PM weekdays</span>
-                        </div>
-                        <div className="hours-row">
-                            <span className="hours-person">🇯🇵 Yuki (Tokyo)</span>
-                            <span className="hours-times">9:00 AM - 7:00 PM weekdays</span>
-                        </div>
-                    </div>
-                    <div className="step-note">
-                        ⚙️ You can set <strong>multiple windows</strong> — e.g., different hours for different days, or specific windows for weekends.
-                    </div>
-                </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="how-section">
-                <div className="step-number">4</div>
-                <div className="step-content">
-                    <h3>🔍 Find the Magic Overlap</h3>
-                    <p>
-                        Humane Calendar scans everyone's availability and finds times that work:
+                        Our engine overlays everyone's "Go Zones" to find the perfect overlap—or the 
+                        best possible time for the core group.
                     </p>
                     <ul>
-                        <li>✅ <strong>Full Matches</strong> — Everyone available</li>
-                        <li>⚠️ <strong>Partial Matches</strong> — Most people available (for larger groups)</li>
-                        <li>🚫 <strong>Busy Times Excluded</strong> — If calendars are connected</li>
+                        <li>✅ <strong>Full matches</strong> — Times that work for everyone</li>
+                        <li>⚠️ <strong>Quorum matches</strong> — Best options when full consensus isn't possible</li>
+                        <li>📧 <strong>One-click invites</strong> — Calendar event sent to all attendees</li>
+                        <li>📹 <strong>Video link included</strong> — Google Meet or Teams, automatically</li>
                     </ul>
-                    <div className="overlap-visual">
-                        <div className="overlap-bar">
-                            <div className="overlap-match">✓ 2 PM London = 9 AM NYC = 11 PM Tokyo</div>
-                        </div>
-                    </div>
                     <div className="step-note">
-                        👥 <strong>Large groups?</strong> See which members can attend each slot. 
-                        Choose to invite only available members, or everyone (unavailable can decline).
+                        No email tag. No "let me check." Just a booked meeting.
                     </div>
                 </div>
             </div>
 
-            {/* Step 5 */}
-            <div className="how-section">
-                <div className="step-number">5</div>
-                <div className="step-content">
-                    <h3>📨 Send Invites with One Click</h3>
-                    <p>
-                        Pick a time slot and click <strong>"Send Invites"</strong>. Everyone receives:
-                    </p>
-                    <ul>
-                        <li>📧 A calendar invite via email (from YOUR account)</li>
-                        <li>📹 Auto-generated <strong>Google Meet</strong> or <strong>Microsoft Teams</strong> link</li>
-                        <li>🕐 Time shown in their local timezone</li>
-                        <li>✉️ Ability to accept, decline, or propose new time</li>
-                    </ul>
-                    <div className="step-note">
-                        🍎 <strong>Apple Calendar users</strong> can download an .ics file that works with any calendar app.
-                    </div>
-                </div>
-            </div>
-
-            {/* Video Meeting Integration */}
+            {/* Competitive Comparison */}
             <div className="how-section highlight-section">
+                <h3>🌟 Why We're Different</h3>
+                <div className="comparison-table">
+                    <div className="comp-row header">
+                        <div className="comp-tool">Tool</div>
+                        <div className="comp-approach">Approach</div>
+                        <div className="comp-problem">The Problem</div>
+                    </div>
+                    <div className="comp-row">
+                        <div className="comp-tool">
+                            <span className="tool-icon">📊</span>
+                            Reclaim / Clockwise
+                        </div>
+                        <div className="comp-approach">Passive Scanning</div>
+                        <div className="comp-problem">Assumes empty = available. Books 6 AM calls.</div>
+                    </div>
+                    <div className="comp-row">
+                        <div className="comp-tool">
+                            <span className="tool-icon">📋</span>
+                            Doodle / Rallly
+                        </div>
+                        <div className="comp-approach">Host-Centric Polling</div>
+                        <div className="comp-problem">"None of these options work for me."</div>
+                    </div>
+                    <div className="comp-row">
+                        <div className="comp-tool">
+                            <span className="tool-icon">🎨</span>
+                            When2Meet
+                        </div>
+                        <div className="comp-approach">Participant Painting</div>
+                        <div className="comp-problem">Finds overlap but doesn't book the meeting.</div>
+                    </div>
+                    <div className="comp-row featured">
+                        <div className="comp-tool">
+                            <span className="tool-icon">📅</span>
+                            <strong>Humane Calendar</strong>
+                        </div>
+                        <div className="comp-approach"><strong>Active Consent + Auto-Execute</strong></div>
+                        <div className="comp-problem">✅ Everyone opts in. Meeting is booked automatically.</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Perfect For */}
+            <div className="how-section">
+                <h3>🎯 Perfect For</h3>
+                <div className="use-cases-grid">
+                    <div className="use-case">
+                        <span className="use-icon">🌍</span>
+                        <strong>Global Teams</strong>
+                        <p>Respects everyone's local working hours</p>
+                    </div>
+                    <div className="use-case">
+                        <span className="use-icon">🚀</span>
+                        <strong>Side Projects</strong>
+                        <p>Coordinate around day jobs & life</p>
+                    </div>
+                    <div className="use-case">
+                        <span className="use-icon">👨‍👩‍👧‍👦</span>
+                        <strong>Family & Friends</strong>
+                        <p>Find time that works for everyone</p>
+                    </div>
+                    <div className="use-case">
+                        <span className="use-icon">💼</span>
+                        <strong>Freelancers</strong>
+                        <p>Control when clients can book you</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Video Links */}
+            <div className="how-section">
                 <h3>📹 Automatic Video Meeting Links</h3>
-                <p>When you send invites, video meeting links are created automatically:</p>
+                <p>
+                    The <strong>organizer</strong> connects their Google or Microsoft account. 
+                    When they send invites, video links are generated automatically:
+                </p>
                 <div className="integration-grid">
                     <div className="integration-item">
                         <span className="integration-icon">🔴</span>
@@ -155,72 +204,19 @@ export function HowItWorks({ isStandalone = false, onClose }) {
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* Smart Features for Groups */}
-            <div className="how-section">
-                <h3>🧠 Smart Features for Groups</h3>
-                <ul>
-                    <li><strong>Partial Attendance:</strong> For groups of 3+, see which slots work for most people</li>
-                    <li><strong>Smart Date Range:</strong> Invite links include your preferred meeting window</li>
-                    <li><strong>Fallback Options:</strong> Expand date range if no times work</li>
-                    <li><strong>Recurring Access:</strong> Same group can schedule multiple meetings</li>
-                    <li><strong>Update Anytime:</strong> Members can update their availability via the same link</li>
-                </ul>
-            </div>
-
-            {/* Why It's Different */}
-            <div className="how-section highlight-section">
-                <h3>🌟 Why Humane Calendar?</h3>
-                <div className="comparison-grid">
-                    <div className="comparison-item">
-                        <div className="comparison-bad">❌ Traditional Scheduling</div>
-                        <p>"Let's meet at 3 PM" — but whose 3 PM?</p>
-                    </div>
-                    <div className="comparison-item">
-                        <div className="comparison-bad">❌ Doodle/When2Meet</div>
-                        <p>Everyone votes, but ignores timezone sanity</p>
-                    </div>
-                    <div className="comparison-item">
-                        <div className="comparison-good">✅ Humane Calendar</div>
-                        <p>Finds times that are reasonable for <em>everyone</em></p>
-                    </div>
+                <div className="step-note">
+                    💡 <strong>Invitees don't need to connect anything</strong> — they just set their availability.
                 </div>
             </div>
 
-            {/* Technical Requirements */}
+            {/* Privacy Footer */}
             <div className="how-section">
-                <h3>⚙️ What's Required</h3>
-                <div className="requirements-grid">
-                    <div className="requirement-item">
-                        <strong>Organizer:</strong>
-                        <ul>
-                            <li>Google or Microsoft account</li>
-                            <li>Grant calendar read/write permission</li>
-                        </ul>
-                    </div>
-                    <div className="requirement-item">
-                        <strong>Participants:</strong>
-                        <ul>
-                            <li>Just a name and email (no account needed)</li>
-                            <li>Optional: Connect calendar to see conflicts</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            {/* Privacy Note */}
-            <div className="how-section">
-                <h3>🔒 Privacy First</h3>
-                <p>
-                    We only see <strong>when</strong> you're busy, never <strong>what</strong> you're doing. 
-                    No event titles, descriptions, or attendee lists are ever accessed.
-                </p>
+                <h3>🔐 Trust & Security</h3>
                 <ul>
-                    <li>✓ Encrypted in transit and at rest</li>
-                    <li>✓ Data deleted automatically after 30 days</li>
-                    <li>✓ GDPR & CCPA ready</li>
-                    <li>✓ Delete your data anytime</li>
+                    <li>✓ Encrypted in transit and at rest (TLS 1.3, AES-256)</li>
+                    <li>✓ Availability data auto-deleted after 30 days</li>
+                    <li>✓ GDPR & CCPA ready — delete your data anytime</li>
+                    <li>✓ No selling or sharing of data. Ever.</li>
                 </ul>
                 <a href="/privacy" className="privacy-link">Read our full Privacy Policy →</a>
             </div>
@@ -228,6 +224,7 @@ export function HowItWorks({ isStandalone = false, onClose }) {
             {/* CTA */}
             <div className="how-cta">
                 <h3>Ready to schedule humanely?</h3>
+                <p className="cta-tagline">Your time. Your terms. Your meeting.</p>
                 <a href="/" className="btn-primary btn-large">Get Started — It's Free</a>
             </div>
         </>
