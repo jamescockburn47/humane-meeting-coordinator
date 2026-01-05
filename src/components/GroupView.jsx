@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BookingModal } from './BookingModal';
 import { SmartSuggestions } from './SmartSuggestions';
-import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup, updateGroupMeetingSettings } from '../services/supabase';
+import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup, updateGroupMeetingSettings, supabase } from '../services/supabase';
 
 // Invite Link Card Component - Focused on sharing links with optional date range
 function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, duration }) {
@@ -193,6 +193,10 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
     const [fullGroupDetails, setFullGroupDetails] = useState(group);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    // Track previous member count to detect new joins
+    const [prevMemberCount, setPrevMemberCount] = useState(0);
+    const [hasAutoSearched, setHasAutoSearched] = useState(false);
+
     // Load group data and saved meeting settings
     useEffect(() => {
         const loadData = async () => {
@@ -213,6 +217,72 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
         };
         loadData();
     }, [group.id, refreshTrigger, settingsLoaded, onMembersLoaded]);
+    
+    // AUTO-SEARCH: Run search automatically when viewing group or when members change
+    useEffect(() => {
+        // Need at least 2 members and settings loaded before auto-searching
+        if (members.length < 2 || !settingsLoaded || loading) return;
+        
+        const shouldSearch = !hasAutoSearched || (prevMemberCount > 0 && members.length !== prevMemberCount);
+        
+        if (shouldSearch) {
+            console.log(`Auto-searching: ${hasAutoSearched ? 'member count changed' : 'initial load'} (${prevMemberCount} → ${members.length})`);
+            onFindTimes(startDate, endDate, duration);
+            setHasAutoSearched(true);
+        }
+        
+        setPrevMemberCount(members.length);
+    }, [members.length, settingsLoaded, hasAutoSearched, prevMemberCount, loading, onFindTimes, startDate, endDate, duration]);
+
+    // REAL-TIME: Subscribe to member changes (new joins, availability updates)
+    useEffect(() => {
+        // Subscribe to changes in group_members table for this group
+        const channel = supabase
+            .channel(`group-${group.id}-members`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // INSERT, UPDATE, DELETE
+                    schema: 'public',
+                    table: 'group_members',
+                    filter: `group_id=eq.${group.id}`
+                },
+                (payload) => {
+                    console.log('Member change detected:', payload.eventType);
+                    // Trigger refresh to reload members and re-search
+                    setRefreshTrigger(p => p + 1);
+                    setHasAutoSearched(false); // Force re-search
+                }
+            )
+            .subscribe();
+
+        // Also subscribe to profile changes (availability updates)
+        const profileChannel = supabase
+            .channel(`group-${group.id}-profiles`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles'
+                },
+                (payload) => {
+                    // Check if this profile is a member of our group
+                    const updatedEmail = payload.new?.email;
+                    if (members.some(m => m.email === updatedEmail)) {
+                        console.log('Member availability updated:', updatedEmail);
+                        setRefreshTrigger(p => p + 1);
+                        setHasAutoSearched(false); // Force re-search
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+            supabase.removeChannel(profileChannel);
+        };
+    }, [group.id, members]);
 
     // Save meeting settings when they change (debounced)
     const saveMeetingSettings = useCallback(async (newStartDate, newEndDate, newDuration) => {
