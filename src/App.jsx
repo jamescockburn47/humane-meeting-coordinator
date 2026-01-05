@@ -11,6 +11,7 @@ import { GroupView } from './components/GroupView';
 import { WorldClock } from './components/WorldClock';
 import { GuestJoinModal } from './components/GuestJoinModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsOfService } from './components/TermsOfService';
 import { AdminDashboard } from './components/AdminDashboard';
 import { JoinGroupPage } from './components/JoinGroupPage';
 import { HowItWorks } from './components/HowItWorks';
@@ -72,6 +73,12 @@ function App() {
     // Check for how it works page
     if (path === '/how-it-works' || path === '/how-it-works/' || path === '/how') {
       setView('how-it-works');
+      return;
+    }
+    
+    // Check for terms of service page
+    if (path === '/terms' || path === '/terms/') {
+      setView('terms');
       return;
     }
   }, []);
@@ -741,6 +748,18 @@ function App() {
       <HowItWorks 
         isStandalone={true}
         onClose={() => {
+          window.history.replaceState({}, '', '/');
+          setView('dashboard');
+        }}
+      />
+    );
+  }
+
+  // Show standalone terms of service page if URL is /terms
+  if (view === 'terms') {
+    return (
+      <TermsOfService 
+        onBack={() => {
           window.history.replaceState({}, '', '/');
           setView('dashboard');
         }}
