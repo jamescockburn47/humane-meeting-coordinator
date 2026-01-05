@@ -723,7 +723,7 @@ export default async function handler(req, res) {
             const systemPrompt = buildSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-2.0-flash', { apiKey }), // Gemini 2.0 Flash with tools
+                model: google('gemini-3-flash', { apiKey }), // Gemini 3 Flash - latest, fast, supports tools
                 system: systemPrompt,
                 messages: conversationMessages,
                 tools,
@@ -803,7 +803,7 @@ export default async function handler(req, res) {
             const systemPrompt = buildAttendeeSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-2.0-flash', { apiKey }), // Gemini 2.0 Flash for attendees
+                model: google('gemini-3-flash', { apiKey }), // Gemini 3 Flash for attendees too
                 system: systemPrompt,
                 messages: conversationMessages
                 // No tools for attendees - simpler experience
