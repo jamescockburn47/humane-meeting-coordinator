@@ -44,12 +44,21 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
 
-  // Check for invite code in URL on load
+  // Check for special URLs on load (/join/:code, /privacy)
   useEffect(() => {
     const path = window.location.pathname;
-    const match = path.match(/\/join\/([A-Za-z0-9]+)/);
-    if (match) {
-      setJoinInviteCode(match[1].toUpperCase());
+    
+    // Check for invite code
+    const joinMatch = path.match(/\/join\/([A-Za-z0-9]+)/);
+    if (joinMatch) {
+      setJoinInviteCode(joinMatch[1].toUpperCase());
+      return;
+    }
+    
+    // Check for privacy policy page
+    if (path === '/privacy' || path === '/privacy/') {
+      setView('privacy');
+      return;
     }
   }, []);
 
@@ -663,6 +672,21 @@ function App() {
   };
 
   // --- RENDER ---
+
+  // Show standalone privacy policy page if URL is /privacy
+  if (view === 'privacy') {
+    return (
+      <PrivacyPolicy 
+        isStandalone={true}
+        onClose={() => {
+          window.history.replaceState({}, '', '/');
+          setView('dashboard');
+        }}
+        onDeleteData={handleDeleteAllData}
+        userEmail={activeAccount?.username}
+      />
+    );
+  }
 
   // Show join page if there's an invite code in URL
   if (joinInviteCode) {

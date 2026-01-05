@@ -1,12 +1,9 @@
 import React from 'react';
 
-export function PrivacyPolicy({ onClose, onDeleteData, userEmail }) {
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content privacy-modal" onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>×</button>
-
-                <div className="privacy-header">
+export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone = false }) {
+    const content = (
+        <>
+            <div className="privacy-header">
                     <span className="privacy-shield">🛡️</span>
                     <h2>Privacy & Data Protection</h2>
                 </div>
@@ -156,22 +153,50 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail }) {
                     </div>
                 )}
 
-                <div className="privacy-footer">
-                    <div className="compliance-badges">
-                        <span className="badge">GDPR Ready</span>
-                        <span className="badge">CCPA Ready</span>
-                        <span className="badge">SOC 2 Infrastructure*</span>
-                    </div>
-                    <p className="compliance-note">
-                        *Built to meet regulatory standards. Not yet formally certified.
-                    </p>
-                    <p className="contact-info">
-                        Questions? Contact: <a href="mailto:privacy@humanecalendar.com">privacy@humanecalendar.com</a>
-                    </p>
-                    <p className="last-updated">
-                        Last updated: January 2026
-                    </p>
+            <div className="privacy-footer">
+                <div className="compliance-badges">
+                    <span className="badge">GDPR Ready</span>
+                    <span className="badge">CCPA Ready</span>
+                    <span className="badge">SOC 2 Infrastructure*</span>
                 </div>
+                <p className="compliance-note">
+                    *Built to meet regulatory standards. Not yet formally certified.
+                </p>
+                <p className="contact-info">
+                    Questions? Contact: <a href="mailto:privacy@humanecalendar.com">privacy@humanecalendar.com</a>
+                </p>
+                <p className="last-updated">
+                    Last updated: January 2026
+                </p>
+            </div>
+        </>
+    );
+
+    // Standalone page mode (for direct URL access)
+    if (isStandalone) {
+        return (
+            <div className="privacy-page-standalone">
+                <div className="privacy-page-header">
+                    <a href="/" className="privacy-back-link">
+                        <img src="/logo.png" alt="Humane Calendar" className="privacy-logo" />
+                    </a>
+                </div>
+                <div className="privacy-page-content">
+                    {content}
+                    <div className="privacy-back-button">
+                        <a href="/" className="btn-primary">← Back to Humane Calendar</a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Modal mode (for in-app access)
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content privacy-modal" onClick={e => e.stopPropagation()}>
+                <button className="modal-close" onClick={onClose}>×</button>
+                {content}
             </div>
         </div>
     );

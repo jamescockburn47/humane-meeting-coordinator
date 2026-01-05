@@ -1141,6 +1141,67 @@ label {
   max-height: 85vh;
 }
 
+/* Standalone Privacy Page (for /privacy URL) */
+.privacy-page-standalone {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.privacy-page-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.privacy-back-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--text-main);
+}
+
+.privacy-logo {
+  height: 48px;
+  width: auto;
+}
+
+.privacy-page-content {
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.privacy-back-button {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.privacy-back-button .btn-primary {
+  display: inline-block;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .privacy-page-content {
+    padding: 1rem;
+  }
+  
+  .privacy-page-header {
+    padding: 1rem;
+  }
+  
+  .privacy-logo {
+    height: 36px;
+  }
+}
+
 .privacy-header {
   display: flex;
   align-items: center;
