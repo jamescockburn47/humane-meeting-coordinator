@@ -17,6 +17,13 @@ export function JoinGroupPage({
     const [isExistingMember, setIsExistingMember] = useState(false);
     const [showUpdateSettings, setShowUpdateSettings] = useState(false);
 
+    // Parse URL parameters for meeting details
+    const [meetingRequest, setMeetingRequest] = useState({
+        from: null,
+        to: null,
+        duration: null
+    });
+
     // Guest form state
     const [guestMode, setGuestMode] = useState(false);
     const [guestName, setGuestName] = useState('');
@@ -25,6 +32,22 @@ export function JoinGroupPage({
     const [windows, setWindows] = useState([
         { start: "09:00", end: "17:00", type: "weekday" }
     ]);
+
+    // Parse URL params on mount
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const from = params.get('from');
+        const to = params.get('to');
+        const dur = params.get('dur');
+        
+        if (from || to || dur) {
+            setMeetingRequest({
+                from: from || null,
+                to: to || null,
+                duration: dur ? parseInt(dur) : null
+            });
+        }
+    }, []);
 
     useEffect(() => {
         loadGroupDetails();
@@ -212,6 +235,34 @@ export function JoinGroupPage({
                         <span>👥 {members.length} {members.length === 1 ? 'member' : 'members'}</span>
                         {group.created_by && <span>Created by {group.created_by.split('@')[0]}</span>}
                     </div>
+                    
+                    {/* Meeting Request Details from URL params */}
+                    {(meetingRequest.from || meetingRequest.to || meetingRequest.duration) && (
+                        <div className="meeting-request-info">
+                            <div className="request-header">
+                                <span className="request-icon">📆</span>
+                                <span>Looking to schedule:</span>
+                            </div>
+                            <div className="request-details">
+                                {meetingRequest.duration && (
+                                    <span className="request-item">
+                                        ⏱️ {meetingRequest.duration} minute meeting
+                                    </span>
+                                )}
+                                {meetingRequest.from && meetingRequest.to && (
+                                    <span className="request-item">
+                                        📅 {new Date(meetingRequest.from).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        {' → '}
+                                        {new Date(meetingRequest.to).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="request-hint">
+                                Set your availability below so we can find a time that works for everyone!
+                            </p>
+                        </div>
+                    )}
+                    
                     {isExistingMember && (
                         <div className="member-status">
                             ✓ You're already a member of this group

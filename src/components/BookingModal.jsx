@@ -4,16 +4,28 @@ import { downloadICS } from '../services/ical';
 export function BookingModal({ slot, members, onConfirm, onCancel, processing, hostProvider, hostEmail, hostName }) {
     const [subject, setSubject] = useState("Team Sync");
     const [description, setDescription] = useState("");
+    const [inviteUnavailable, setInviteUnavailable] = useState(true); // Invite everyone by default
 
     if (!slot) return null;
 
     const startDate = new Date(slot.start);
     const endDate = new Date(slot.end);
     const duration = Math.round((endDate - startDate) / (1000 * 60)); // minutes
+    
+    // Check if this is a partial match
+    const isPartialMatch = slot.isFullMatch === false;
+    const availableMembers = slot.availableMembers || members.map(m => ({ email: m.email, name: m.display_name || m.email }));
+    const unavailableMembers = slot.unavailableMembers || [];
+    
+    // Determine who to invite based on user choice
+    const membersToInvite = inviteUnavailable 
+        ? members 
+        : members.filter(m => availableMembers.some(am => am.email === m.email));
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onConfirm(subject, description);
+        // Pass the filtered members list if partial
+        onConfirm(subject, description, membersToInvite);
     };
 
     return (
@@ -22,6 +34,47 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
                 <button className="modal-close" onClick={onCancel} disabled={processing}>×</button>
                 
                 <h2>📅 Send Meeting Invites</h2>
+                
+                {/* Partial Match Warning */}
+                {isPartialMatch && (
+                    <div className="partial-match-warning">
+                        <div className="warning-header">
+                            <span className="warning-icon">⚠️</span>
+                            <span>Not everyone is available at this time</span>
+                        </div>
+                        <div className="availability-summary">
+                            <div className="available-group">
+                                <span className="group-label">✅ Available ({availableMembers.length}):</span>
+                                <div className="member-chips">
+                                    {availableMembers.map((m, i) => (
+                                        <span key={i} className="mini-chip available">{m.name}</span>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="unavailable-group">
+                                <span className="group-label">❌ Unavailable ({unavailableMembers.length}):</span>
+                                <div className="member-chips">
+                                    {unavailableMembers.map((m, i) => (
+                                        <span key={i} className="mini-chip unavailable" title={m.reason}>
+                                            {m.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="invite-choice">
+                            <label className="checkbox-label">
+                                <input 
+                                    type="checkbox" 
+                                    checked={inviteUnavailable}
+                                    onChange={(e) => setInviteUnavailable(e.target.checked)}
+                                />
+                                <span>Send invites to unavailable members anyway</span>
+                                <span className="checkbox-hint">(They can decline or propose a new time)</span>
+                            </label>
+                        </div>
+                    </div>
+                )}
                 
                 <div className="booking-time-display">
                     <div className="time-slot">
@@ -73,9 +126,14 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
                     </div>
 
                     <div className="form-group">
-                        <label>Inviting {members.length} {members.length === 1 ? 'Person' : 'People'}</label>
+                        <label>
+                            Inviting {membersToInvite.length} {membersToInvite.length === 1 ? 'Person' : 'People'}
+                            {isPartialMatch && !inviteUnavailable && (
+                                <span className="invite-note"> (available only)</span>
+                            )}
+                        </label>
                         <div className="attendee-list">
-                            {members.map(m => (
+                            {membersToInvite.map(m => (
                                 <div key={m.email} className="attendee-chip">
                                     <span className="attendee-avatar">
                                         {(m.display_name || m.email).substring(0, 2).toUpperCase()}
@@ -119,7 +177,7 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
                             type="button" 
                             className="btn-ghost apple-btn"
                             onClick={() => {
-                                const memberEmails = members.map(m => m.email);
+                                const memberEmails = membersToInvite.map(m => m.email);
                                 downloadICS(
                                     subject,
                                     description,

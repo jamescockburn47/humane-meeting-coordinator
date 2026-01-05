@@ -2,12 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { BookingModal } from './BookingModal';
 import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup } from '../services/supabase';
 
-// Invite Link Card Component - Focused on sharing links, not codes
-function InviteLinkCard({ groupName, inviteCode, groupId }) {
+// Invite Link Card Component - Focused on sharing links with optional date range
+function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, duration }) {
     const [copied, setCopied] = useState(false);
     // Use invite_code if available, otherwise fall back to group UUID
     const code = inviteCode || groupId;
-    const inviteUrl = `${window.location.origin}/join/${code}`;
+    
+    // Build URL with optional date range parameters
+    let inviteUrl = `${window.location.origin}/join/${code}`;
+    const params = new URLSearchParams();
+    if (startDate) params.set('from', startDate);
+    if (endDate) params.set('to', endDate);
+    if (duration && duration !== 60) params.set('dur', duration);
+    if (params.toString()) {
+        inviteUrl += `?${params.toString()}`;
+    }
+
+    // Format date range for messages
+    const formatDateRange = () => {
+        if (!startDate || !endDate) return '';
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+        return ` (${formatter.format(start)} - ${formatter.format(end)})`;
+    };
 
     const handleCopy = async () => {
         await navigator.clipboard.writeText(inviteUrl);
@@ -16,13 +34,17 @@ function InviteLinkCard({ groupName, inviteCode, groupId }) {
     };
 
     const handleWhatsApp = () => {
-        const msg = `Hey! Join my scheduling group "${groupName}" so we can find a time that works for everyone:\n\n${inviteUrl}`;
+        const dateInfo = formatDateRange();
+        const durationInfo = duration ? ` for a ${duration}-minute meeting` : '';
+        const msg = `Hey! Join my scheduling group "${groupName}"${durationInfo}${dateInfo}:\n\n${inviteUrl}\n\nSet your availability so we can find a time that works for everyone! 📅`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
     const handleEmail = () => {
+        const dateInfo = formatDateRange();
+        const durationInfo = duration ? `${duration}-minute ` : '';
         const subject = `Join my scheduling group: ${groupName}`;
-        const body = `Hi!\n\nI'm inviting you to join my Humane Calendar group "${groupName}".\n\nJust click the link below to join and set your availability:\n\n${inviteUrl}\n\nThis helps us find a time that works for everyone!`;
+        const body = `Hi!\n\nI'm inviting you to join my Humane Calendar group "${groupName}" to schedule a ${durationInfo}meeting${dateInfo}.\n\nJust click the link below to join and set your availability:\n\n${inviteUrl}\n\nThis helps us find a time that works for everyone!`;
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     };
 
@@ -31,7 +53,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId }) {
             try {
                 await navigator.share({
                     title: `Join ${groupName}`,
-                    text: 'Join my Humane Calendar group!',
+                    text: `Join my Humane Calendar group to find a meeting time!`,
                     url: inviteUrl
                 });
             } catch (e) {
@@ -52,6 +74,19 @@ function InviteLinkCard({ groupName, inviteCode, groupId }) {
                     <p>Share this link with anyone you want to join</p>
                 </div>
             </div>
+
+            {/* Show date range info if set */}
+            {startDate && endDate && (
+                <div className="invite-date-range">
+                    <span className="date-range-label">📆 Looking for availability:</span>
+                    <span className="date-range-value">
+                        {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} 
+                        {' → '}
+                        {new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {duration && <span className="duration-tag"> • {duration} min</span>}
+                    </span>
+                </div>
+            )}
 
             <div className="invite-url-box">
                 <input 
@@ -86,6 +121,57 @@ function InviteLinkCard({ groupName, inviteCode, groupId }) {
             <p className="invite-note">
                 💡 Each person can use the same link to join. No limit!
             </p>
+        </div>
+    );
+}
+
+// Slot Card Component - Shows available time with attendance info
+function SlotCard({ slot, onClick, members, showPartial = false }) {
+    const date = new Date(slot.start);
+    const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const totalMembers = members?.length || slot.availableMembers?.length + slot.unavailableMembers?.length || 0;
+    const availableCount = slot.availableMembers?.length || totalMembers;
+    
+    const isPartial = !slot.isFullMatch;
+    const borderColor = isPartial ? 'var(--warning, #f59e0b)' : 'var(--primary)';
+    
+    return (
+        <div
+            className={`card slot-card ${isPartial ? 'partial' : 'full'}`}
+            style={{ borderLeft: `4px solid ${borderColor}`, cursor: 'pointer' }}
+            onClick={onClick}
+            title="Click to Book"
+        >
+            <div className="slot-header">
+                <div className="slot-time">{timeString}</div>
+                {totalMembers > 0 && (
+                    <div className={`attendance-badge ${isPartial ? 'partial' : 'full'}`}>
+                        {availableCount}/{totalMembers}
+                    </div>
+                )}
+            </div>
+            <div className="slot-date">
+                {date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            
+            {/* Show who's available/unavailable for partial matches */}
+            {showPartial && slot.unavailableMembers?.length > 0 && (
+                <div className="slot-attendance-detail">
+                    <div className="unavailable-list">
+                        <span className="label">❌ Can't attend:</span>
+                        {slot.unavailableMembers.map((m, i) => (
+                            <span key={i} className="member-chip unavailable" title={m.reason}>
+                                {m.name}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+            
+            <div className="slot-timezone">
+                Shown in: {timeZone}
+            </div>
         </div>
     );
 }
@@ -154,10 +240,10 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     hostEmail={currentUser?.username}
                     hostName={currentUser?.name}
                     processing={bookingProcessing}
-                    onConfirm={async (subj, desc) => {
+                    onConfirm={async (subj, desc, membersToInvite) => {
                         setBookingProcessing(true);
                         try {
-                            await onBook(group.id, bookingSlot, subj, desc);
+                            await onBook(group.id, bookingSlot, subj, desc, membersToInvite);
                             setBookingSlot(null);
                         } catch (err) {
                             console.error(err);
@@ -247,6 +333,9 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                             groupName={fullGroupDetails?.name || group.name}
                             inviteCode={fullGroupDetails?.invite_code || group.invite_code}
                             groupId={group.id}
+                            startDate={startDate}
+                            endDate={endDate}
+                            duration={duration}
                         />
                     )}
 
@@ -288,37 +377,60 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                 </div>
             </div>
 
-            <div className="grid-cols-2">
-                {suggestions.map((slot, i) => {
-                    const date = new Date(slot.start);
-                    const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            {/* Full Match Section */}
+            {suggestions.filter(s => s.isFullMatch).length > 0 && (
+                <div className="slots-section">
+                    <h4 className="slots-section-title">
+                        <span className="section-icon">✅</span>
+                        Everyone Available ({suggestions.filter(s => s.isFullMatch).length} times)
+                    </h4>
+                    <div className="grid-cols-2">
+                        {suggestions.filter(s => s.isFullMatch).slice(0, 10).map((slot, i) => (
+                            <SlotCard key={`full-${i}`} slot={slot} onClick={() => setBookingSlot(slot)} members={members} />
+                        ))}
+                    </div>
+                </div>
+            )}
 
-                    return (
-                        <div
-                            key={i}
-                            className="card slot-card"
-                            style={{ borderLeft: '4px solid var(--primary)', cursor: 'pointer' }}
-                            onClick={() => setBookingSlot(slot)}
-                            title="Click to Book"
-                        >
-                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>
-                                {timeString}
-                            </div>
-                            <div style={{ color: 'var(--text-muted)' }}>
-                                {date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', marginTop: '0.5rem', color: 'var(--primary)', fontStyle: 'italic' }}>
-                                Shown in: {timeZone}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+            {/* Partial Match Section - Only show if no full matches or explicitly viewing */}
+            {suggestions.filter(s => !s.isFullMatch).length > 0 && (
+                <div className="slots-section partial-section">
+                    <h4 className="slots-section-title">
+                        <span className="section-icon">⚠️</span>
+                        Partial Availability ({suggestions.filter(s => !s.isFullMatch).length} times)
+                        <span className="section-subtitle">Some members unavailable</span>
+                    </h4>
+                    <div className="grid-cols-2">
+                        {suggestions.filter(s => !s.isFullMatch).slice(0, 10).map((slot, i) => (
+                            <SlotCard key={`partial-${i}`} slot={slot} onClick={() => setBookingSlot(slot)} members={members} showPartial />
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {!loading && suggestions.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                    No slots found. Try a wider date range or check everyone's Humane Hours.
+                <div className="no-slots-found">
+                    <div className="no-slots-icon">🔍</div>
+                    <h4>No matching times found</h4>
+                    <p>This could mean:</p>
+                    <ul>
+                        <li>Members' availability windows don't overlap</li>
+                        <li>All overlapping times are during busy periods</li>
+                        <li>Members haven't set their availability windows yet</li>
+                    </ul>
+                    <div className="no-slots-actions">
+                        <button 
+                            className="btn-secondary"
+                            onClick={() => {
+                                // Expand date range
+                                const newEnd = new Date(endDate);
+                                newEnd.setDate(newEnd.getDate() + 7);
+                                setEndDate(newEnd.toISOString().split('T')[0]);
+                            }}
+                        >
+                            📅 Expand Date Range (+7 days)
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

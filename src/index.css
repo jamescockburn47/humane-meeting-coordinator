@@ -247,8 +247,157 @@ label {
 /* --- Grid Layouts --- */
 .grid-cols-2 {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* --- Slot Cards --- */
+.slots-section {
+  margin-bottom: 2rem;
+}
+
+.slots-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.section-icon {
+  font-size: 1.25rem;
+}
+
+.section-subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+
+.partial-section {
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--border);
+}
+
+.slot-card {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.slot-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.slot-card.partial {
+  opacity: 0.9;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.slot-time {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.attendance-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+}
+
+.attendance-badge.full {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.attendance-badge.partial {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.slot-date {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.slot-timezone {
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  color: var(--primary);
+  font-style: italic;
+}
+
+.slot-attendance-detail {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.unavailable-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.unavailable-list .label {
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+.member-chip {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.75rem;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.no-slots-found {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+}
+
+.no-slots-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.no-slots-found h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+}
+
+.no-slots-found p {
+  margin: 0 0 1rem 0;
+  color: var(--text-muted);
+}
+
+.no-slots-found ul {
+  text-align: left;
+  max-width: 300px;
+  margin: 0 auto 1.5rem auto;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.no-slots-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
 }
 
 /* --- Utility --- */
@@ -445,7 +594,106 @@ label {
 
 /* --- Booking Modal Styles --- */
 .booking-modal {
-  max-width: 520px;
+  max-width: 560px;
+}
+
+/* Partial Match Warning */
+.partial-match-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.warning-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #f59e0b;
+}
+
+.warning-icon {
+  font-size: 1.25rem;
+}
+
+.availability-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.available-group,
+.unavailable-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.group-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  min-width: 140px;
+}
+
+.member-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.mini-chip {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  font-weight: 500;
+}
+
+.mini-chip.available {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.mini-chip.unavailable {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.invite-choice {
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.checkbox-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.checkbox-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-basis: 100%;
+  margin-left: 26px;
+}
+
+.invite-note {
+  font-size: 0.8rem;
+  color: var(--primary);
+  font-weight: 500;
 }
 
 .booking-time-display {
@@ -711,6 +959,46 @@ label {
   color: var(--text-muted);
   font-size: 0.85rem;
   margin-bottom: 1rem;
+}
+
+.meeting-request-info {
+  background: var(--primary-dim);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin: 1rem 0;
+  text-align: left;
+}
+
+.request-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.request-icon {
+  font-size: 1.25rem;
+}
+
+.request-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.request-item {
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.request-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-style: italic;
 }
 
 .member-preview {
@@ -1008,6 +1296,32 @@ label {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.invite-date-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--primary-dim);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.date-range-label {
+  color: var(--text-muted);
+}
+
+.date-range-value {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.duration-tag {
+  font-size: 0.75rem;
+  opacity: 0.8;
 }
 
 .invite-url-box {

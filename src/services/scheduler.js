@@ -5,14 +5,19 @@ import { addMinutes } from 'date-fns';
  * The Core Algorithm: Find intersection of "Humane Windows" minus "Busy Slots".
  * 
  * This function finds time slots that:
- * 1. Fall within EVERY member's availability windows (in their local timezone)
- * 2. Don't overlap with any member's busy times
+ * 1. Fall within members' availability windows (in their local timezone)
+ * 2. Don't overlap with members' busy times
+ * 
+ * NEW: Also returns partial attendance info for groups > 2 people
  */
-export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEndStr, durationMinutes) {
+export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEndStr, durationMinutes, options = {}) {
+    const { includePartial = true, minAttendees = 2 } = options;
+    
     console.log("=== SCHEDULER DEBUG ===");
     console.log("Range:", rangeStartStr, "to", rangeEndStr);
     console.log("Duration:", durationMinutes, "minutes");
     console.log("Members:", members.length);
+    console.log("Include partial:", includePartial, "Min attendees:", minAttendees);
     
     // Log each member's windows
     members.forEach((m, i) => {
@@ -24,7 +29,6 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
     console.log("Busy slots:", busySlots.length);
 
     // Parse dates - ensure we work in UTC to avoid timezone issues
-    // rangeStartStr format: '2025-01-06'
     const [startYear, startMonth, startDay] = rangeStartStr.split('-').map(Number);
     const [endYear, endMonth, endDay] = rangeEndStr.split('-').map(Number);
     
@@ -34,66 +38,108 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
 
     console.log("Scan range (UTC):", startScan.toISOString(), "to", endScan.toISOString());
 
-    const candidates = [];
+    const fullMatchCandidates = [];
+    const partialMatchCandidates = [];
     const step = 30; // Check every 30 minutes
     let currentTime = new Date(startScan);
     let slotsChecked = 0;
-    let rejectedByHumane = 0;
-    let rejectedByBusy = 0;
 
     while (currentTime < endScan) {
         const slotEnd = addMinutes(currentTime, durationMinutes);
         slotsChecked++;
 
-        // Check 1: Is this slot "Humane" for everyone?
-        let allHumane = true;
+        // Check each member's availability for this slot
+        const availableMembers = [];
+        const unavailableMembers = [];
 
         for (const member of members) {
-            const result = isHumane(currentTime, slotEnd, member);
-            if (!result.humane) {
-                allHumane = false;
-                break;
+            const humaneResult = isHumane(currentTime, slotEnd, member);
+            const busyResult = isBusy(currentTime, slotEnd, member.email, busySlots);
+            
+            if (humaneResult.humane && !busyResult) {
+                availableMembers.push({
+                    email: member.email,
+                    name: member.name || member.email.split('@')[0]
+                });
+            } else {
+                unavailableMembers.push({
+                    email: member.email,
+                    name: member.name || member.email.split('@')[0],
+                    reason: !humaneResult.humane ? 'Outside humane hours' : 'Busy'
+                });
             }
         }
 
-        if (!allHumane) {
-            rejectedByHumane++;
-            currentTime = addMinutes(currentTime, step);
-            continue;
-        }
+        const attendanceRatio = availableMembers.length / members.length;
 
-        // Check 2: Is anyone busy?
-        let anyoneBusy = false;
-        for (const member of members) {
-            if (isBusy(currentTime, slotEnd, member.email, busySlots)) {
-                anyoneBusy = true;
-                break;
-            }
+        // Full match - everyone available
+        if (availableMembers.length === members.length) {
+            fullMatchCandidates.push({
+                start: currentTime.toISOString(),
+                end: slotEnd.toISOString(),
+                confidence: 1.0,
+                availableMembers,
+                unavailableMembers: [],
+                attendanceRatio: 1.0,
+                isFullMatch: true
+            });
         }
-
-        if (anyoneBusy) {
-            rejectedByBusy++;
-            currentTime = addMinutes(currentTime, step);
-            continue;
+        // Partial match - at least minAttendees available
+        else if (includePartial && availableMembers.length >= minAttendees) {
+            partialMatchCandidates.push({
+                start: currentTime.toISOString(),
+                end: slotEnd.toISOString(),
+                confidence: attendanceRatio,
+                availableMembers,
+                unavailableMembers,
+                attendanceRatio,
+                isFullMatch: false
+            });
         }
-
-        // This slot works for everyone!
-        candidates.push({
-            start: currentTime.toISOString(),
-            end: slotEnd.toISOString(),
-            confidence: 1.0
-        });
 
         currentTime = addMinutes(currentTime, step);
     }
 
     console.log("=== SCHEDULER RESULTS ===");
     console.log(`Slots checked: ${slotsChecked}`);
-    console.log(`Rejected (not humane): ${rejectedByHumane}`);
-    console.log(`Rejected (someone busy): ${rejectedByBusy}`);
-    console.log(`Valid candidates: ${candidates.length}`);
+    console.log(`Full matches (everyone): ${fullMatchCandidates.length}`);
+    console.log(`Partial matches: ${partialMatchCandidates.length}`);
 
-    return candidates;
+    // Return full matches first, then partial matches sorted by attendance ratio
+    const results = [
+        ...fullMatchCandidates,
+        ...partialMatchCandidates.sort((a, b) => b.attendanceRatio - a.attendanceRatio)
+    ];
+
+    // Deduplicate consecutive similar slots
+    const dedupedResults = deduplicateSlots(results);
+    
+    console.log(`After dedup: ${dedupedResults.length}`);
+    
+    return dedupedResults;
+}
+
+/**
+ * Remove redundant consecutive slots that have the same attendance
+ */
+function deduplicateSlots(slots) {
+    if (slots.length <= 1) return slots;
+    
+    const result = [];
+    let lastSlot = null;
+    
+    for (const slot of slots) {
+        // Keep if it's the first slot, or if attendance changed
+        if (!lastSlot || 
+            slot.isFullMatch !== lastSlot.isFullMatch ||
+            slot.attendanceRatio !== lastSlot.attendanceRatio ||
+            new Date(slot.start).toDateString() !== new Date(lastSlot.start).toDateString()) {
+            result.push(slot);
+            lastSlot = slot;
+        }
+    }
+    
+    return result;
 }
 
 /**

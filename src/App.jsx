@@ -580,7 +580,7 @@ function App() {
     }
   };
 
-  const handleBookMeeting = async (groupId, slot, subject, description) => {
+  const handleBookMeeting = async (groupId, slot, subject, description, membersToInvite = null) => {
     if (!activeAccount) { 
       alert("Please sign in to book a meeting."); 
       throw new Error("Not signed in");
@@ -597,7 +597,14 @@ function App() {
     }
 
     try {
-      const members = await getGroupMembers(groupId);
+      // Use provided members list if available (for partial attendance), otherwise fetch all
+      let members;
+      if (membersToInvite && membersToInvite.length > 0) {
+        members = membersToInvite;
+      } else {
+        members = await getGroupMembers(groupId);
+      }
+      
       const memberEmails = members.map(m => m.email);
       const organizerEmail = activeAccount.username;
 
@@ -606,7 +613,7 @@ function App() {
         memberEmails.push(organizerEmail);
       }
 
-      console.log("Sending invites to:", memberEmails, "Organizer:", organizerEmail);
+      console.log("Sending invites to:", memberEmails, "(", members.length, "members)", "Organizer:", organizerEmail);
 
       if (activeAccount.provider === 'google') {
         const result = await createGoogleEvent(
