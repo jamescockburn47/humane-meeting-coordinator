@@ -1207,12 +1207,22 @@ export default async function handler(req, res) {
             content: msg.content
         }));
 
-        // Select model - Claude 4.5 Haiku preferred (fast, cheap, reliable), Gemini fallback
+        // Select model - Claude preferred, Gemini fallback
+        // Try multiple Claude model names in case naming convention changed
+        const claudeModels = [
+            'claude-3-5-haiku-20241022',  // Claude 3.5 Haiku (proven to work)
+            'claude-3-5-haiku-latest',     // Latest alias
+            'claude-3-haiku-20240307'      // Older stable version
+        ];
+        
         const getModel = () => {
             if (useClaude) {
-                return anthropic('claude-haiku-4-5-20250929'); // Claude 4.5 Haiku - fastest, cheapest
+                const modelName = claudeModels[0]; // Use first option
+                console.log(`Using Claude model: ${modelName}`);
+                return anthropic(modelName);
             }
-            return google('gemini-2.0-flash-001', { apiKey: geminiKey }); // Stable Gemini fallback
+            console.log('Using Gemini fallback: gemini-2.0-flash-001');
+            return google('gemini-2.0-flash-001', { apiKey: geminiKey });
         };
 
         if (isOrganiser) {
@@ -1356,16 +1366,29 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error("Chat API error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
         
         const errorMessage = error.message || String(error);
+        const errorCause = error.cause ? JSON.stringify(error.cause) : '';
         
-        if (errorMessage.includes('API key') || errorMessage.includes('API_KEY')) {
-            return res.status(500).json({ error: "Invalid API key" });
+        // Check for specific error types
+        if (errorMessage.includes('API key') || errorMessage.includes('API_KEY') || errorMessage.includes('authentication')) {
+            return res.status(500).json({ error: "Invalid or missing API key. Check ANTHROPIC_API_KEY in Vercel." });
         }
-        if (errorMessage.includes('quota') || errorMessage.includes('429')) {
-            return res.status(429).json({ error: "API quota exceeded" });
+        if (errorMessage.includes('quota') || errorMessage.includes('429') || errorMessage.includes('rate')) {
+            return res.status(429).json({ error: "API rate limit exceeded. Try again in a moment." });
+        }
+        if (errorMessage.includes('model') || errorMessage.includes('not found') || errorMessage.includes('invalid_model')) {
+            return res.status(500).json({ error: `Model error: ${errorMessage}. The model name may be incorrect.` });
+        }
+        if (errorMessage.includes('connect') || errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')) {
+            return res.status(500).json({ error: "Could not connect to AI service. Network issue." });
         }
         
-        return res.status(500).json({ error: errorMessage });
+        // Include more context in error
+        return res.status(500).json({ 
+            error: `AI error: ${errorMessage}`,
+            details: errorCause || undefined
+        });
     }
 }

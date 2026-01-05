@@ -169,21 +169,26 @@ export function SchedulingAssistant({
 
     // Extract copyable messages from content
     const extractCopyableMessages = (content) => {
-        // Look for message blocks (text between --- markers or in quotes after "message:")
+        // Look for message blocks - only well-formed ones with clear markers
         const messages = [];
         
-        // Pattern 1: Text between --- markers
-        const dashPattern = /---\n([\s\S]*?)\n---/g;
+        // Pattern 1: Text between --- markers (at least 20 chars to be a real message)
+        const dashPattern = /---\n([\s\S]{20,}?)\n---/g;
         let match;
         while ((match = dashPattern.exec(content)) !== null) {
-            messages.push(match[1].trim());
+            const text = match[1].trim();
+            if (text.length > 30 && text.includes('\n')) { // Must be multi-line message
+                messages.push(text);
+            }
         }
         
-        // Pattern 2: "Here's a message:" followed by quoted text
-        const quotePattern = /[Mm]essage[:\s]*\n*["']?([\s\S]*?)["']?(?=\n\n|$)/g;
+        // Pattern 2: "Here's a/the message for [Name]:" followed by actual message content
+        // Only match if followed by a greeting like "Hi" or "Dear"
+        const quotePattern = /(?:Here's (?:a|the) message[^:]*:|Message for [^:]+:)\s*\n+(Hi |Dear |Hey )([\s\S]*?)(?=\n\n\n|$)/gi;
         while ((match = quotePattern.exec(content)) !== null) {
-            if (!messages.includes(match[1].trim())) {
-                messages.push(match[1].trim());
+            const fullMessage = (match[1] + match[2]).trim();
+            if (fullMessage.length > 50 && !messages.includes(fullMessage)) {
+                messages.push(fullMessage);
             }
         }
         
