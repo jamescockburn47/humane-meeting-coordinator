@@ -791,7 +791,36 @@ function App() {
       <main className="main-area">
         {view === 'dashboard' && (
           <div className="animate-fade-in">
-            <h2>Dashboard</h2>
+            {/* Hero Section - Show when not logged in */}
+            {!activeAccount && (
+              <div className="hero-section">
+                <h1 className="hero-title">
+                  The Only Scheduler That <span className="hero-highlight">Asks Before It Books</span>
+                </h1>
+                <p className="hero-subtitle">
+                  Everyone picks their own times. We find the overlap. The meeting books itself.
+                </p>
+                <div className="hero-features">
+                  <div className="hero-feature">
+                    <span className="hero-icon">🎨</span>
+                    <span>Invitees set their own hours</span>
+                  </div>
+                  <div className="hero-feature">
+                    <span className="hero-icon">🔒</span>
+                    <span>No creepy calendar access</span>
+                  </div>
+                  <div className="hero-feature">
+                    <span className="hero-icon">📹</span>
+                    <span>Auto-generates video links</span>
+                  </div>
+                </div>
+                <div className="hero-cta">
+                  <p className="hero-cta-text">Sign in to create a scheduling group:</p>
+                </div>
+              </div>
+            )}
+
+            <h2>{activeAccount ? 'Dashboard' : ''}</h2>
 
             <div className="grid-cols-2" style={{ marginBottom: '2rem' }}>
               <div className="card">
