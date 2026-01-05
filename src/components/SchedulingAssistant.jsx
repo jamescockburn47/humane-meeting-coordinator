@@ -11,7 +11,8 @@ export function SchedulingAssistant({
     humaneWindows = [],
     isOpen: controlledIsOpen,
     onOpenChange,
-    initialQuestion = null
+    initialQuestion = null,
+    isOrganiser = false // Determines AI model tier: organiser gets full agent, attendee gets simple chat
 }) {
     const [internalIsOpen, setInternalIsOpen] = useState(false);
     const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
@@ -101,7 +102,8 @@ export function SchedulingAssistant({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     messages: currentMessages.map(m => ({ role: m.role, content: m.content })),
-                    context
+                    context,
+                    role: isOrganiser ? 'organiser' : 'attendee'
                 }),
             });
 

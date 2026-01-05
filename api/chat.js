@@ -361,6 +361,56 @@ const tools = {
     })
 };
 
+// Simpler system prompt for attendees (no complex analysis needed)
+function buildAttendeeSystemPrompt(context) {
+    let prompt = `You are a helpful scheduling assistant for Humane Calendar. You're helping an attendee (invitee) understand and set their availability.
+
+## YOUR ROLE
+You help attendees:
+- Understand what times are being considered for the meeting
+- Set their availability windows appropriately
+- Understand timezone differences
+- Know what happens next
+
+## RULES
+1. Be friendly and concise (2-3 sentences max)
+2. Use British English
+3. Only discuss scheduling topics
+4. Don't suggest times between midnight-6am unless asked
+5. Explain things simply - attendees don't need complex analysis
+
+## HOW TO CHANGE AVAILABILITY
+Tell attendees: "To change your available times, scroll to 'My Available Times' and add or edit your windows. Click 'Save' when done."
+
+## CONTEXT`;
+
+    if (context?.user) {
+        prompt += `\n\nYou: ${context.user.name || 'Attendee'} (${context.user.timezone || 'Unknown timezone'})`;
+    }
+
+    if (context?.group) {
+        prompt += `\nMeeting: "${context.group.name}" with ${context.group.memberCount} people`;
+    }
+
+    if (context?.members?.length > 0) {
+        const timezones = [...new Set(context.members.map(m => m.timezone).filter(Boolean))];
+        if (timezones.length > 1) {
+            prompt += `\nTimezones in group: ${timezones.join(', ')}`;
+        }
+    }
+
+    if (context?.suggestions?.length > 0) {
+        const fullMatches = context.suggestions.filter(s => s.isFullMatch);
+        if (fullMatches.length > 0) {
+            prompt += `\n\nGood news: ${fullMatches.length} times work for everyone!`;
+        } else {
+            prompt += `\n\nNo times work for everyone yet. The organiser may ask people to adjust.`;
+        }
+    }
+
+    return prompt;
+}
+
 export default async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -376,7 +426,10 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { messages, context } = req.body;
+        const { messages, context, role = 'attendee' } = req.body;
+        
+        // Determine if this is an organiser (full agent) or attendee (simple chat)
+        const isOrganiser = role === 'organiser';
 
         const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
 
@@ -385,56 +438,65 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: "API key not configured" });
         }
 
-        const systemPrompt = buildSystemPrompt(context);
-
         const conversationMessages = messages.map(msg => ({
             role: msg.role,
             content: msg.content
         }));
 
-        // Use generateText with tools
-        const result = await generateText({
-            model: google('gemini-2.0-flash-001', { apiKey }),
-            system: systemPrompt,
-            messages: conversationMessages,
-            tools,
-            toolChoice: 'auto',
-            maxSteps: 5, // Allow multiple tool calls
-            // Pass context to tools via experimental_context
-            experimental_toolCallStreaming: false
-        });
+        if (isOrganiser) {
+            // ORGANISER: Full AI Agent with Gemini 3 Flash and tools
+            const systemPrompt = buildSystemPrompt(context);
 
-        // Collect tool results to include in response
-        const toolResults = [];
-        if (result.steps) {
-            for (const step of result.steps) {
-                if (step.toolCalls) {
-                    for (const tc of step.toolCalls) {
-                        // Execute tool with context
-                        let toolResult;
-                        if (tc.toolName === 'analyze_timezone_overlap') {
-                            toolResult = analyzeTimezoneOverlap(context);
-                        } else if (tc.toolName === 'suggest_member_changes') {
-                            toolResult = suggestChangesForMember(context, tc.args.memberName, tc.args.targetTimeUTC);
-                        } else if (tc.toolName === 'generate_message') {
-                            toolResult = generateMessageForMember(context, tc.args.memberName, tc.args.messageType, tc.args.specificSuggestion);
-                        }
-                        
-                        if (toolResult) {
-                            toolResults.push({
-                                tool: tc.toolName,
-                                result: toolResult
-                            });
+            const result = await generateText({
+                model: google('gemini-2.0-flash-001', { apiKey }), // Using 2.0 as 3.0 may not be stable
+                system: systemPrompt,
+                messages: conversationMessages,
+                tools,
+                toolChoice: 'auto',
+                maxSteps: 5
+            });
+
+            // Collect tool results
+            const toolResults = [];
+            if (result.steps) {
+                for (const step of result.steps) {
+                    if (step.toolCalls) {
+                        for (const tc of step.toolCalls) {
+                            let toolResult;
+                            if (tc.toolName === 'analyze_timezone_overlap') {
+                                toolResult = analyzeTimezoneOverlap(context);
+                            } else if (tc.toolName === 'suggest_member_changes') {
+                                toolResult = suggestChangesForMember(context, tc.args.memberName, tc.args.targetTimeUTC);
+                            } else if (tc.toolName === 'generate_message') {
+                                toolResult = generateMessageForMember(context, tc.args.memberName, tc.args.messageType, tc.args.specificSuggestion);
+                            }
+                            
+                            if (toolResult) {
+                                toolResults.push({ tool: tc.toolName, result: toolResult });
+                            }
                         }
                     }
                 }
             }
-        }
 
-        return res.status(200).json({ 
-            response: result.text,
-            toolResults: toolResults.length > 0 ? toolResults : undefined
-        });
+            return res.status(200).json({ 
+                response: result.text,
+                toolResults: toolResults.length > 0 ? toolResults : undefined
+            });
+
+        } else {
+            // ATTENDEE: Simple chat with Gemini 1.5 Flash (cheaper, faster)
+            const systemPrompt = buildAttendeeSystemPrompt(context);
+
+            const result = await generateText({
+                model: google('gemini-1.5-flash', { apiKey }), // Cheaper model for attendees
+                system: systemPrompt,
+                messages: conversationMessages
+                // No tools for attendees - simpler experience
+            });
+
+            return res.status(200).json({ response: result.text });
+        }
 
     } catch (error) {
         console.error("Chat API error:", error);

@@ -1085,6 +1085,7 @@ function App() {
           if (!open) setAssistantQuestion(null); // Clear question when closing
         }}
         initialQuestion={assistantQuestion}
+        isOrganiser={selectedGroup?.created_by === activeAccount?.username}
       />
     </div>
   )
