@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BookingModal } from './BookingModal';
 import { SmartSuggestions } from './SmartSuggestions';
+import { AICommandCenter } from './AICommandCenter';
 import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup, updateGroupMeetingSettings, supabase } from '../services/supabase';
 
 // Invite Link Card Component - Focused on sharing links with optional date range
@@ -484,6 +485,16 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     </div>
                 </div>
             </div>
+
+            {/* AI Command Center - Prominent AI assistant with action buttons */}
+            <AICommandCenter
+                currentUser={currentUser}
+                currentGroup={fullGroupDetails}
+                groupMembers={members}
+                suggestions={suggestions}
+                isOrganiser={isCreator}
+                onBookMeeting={(slot) => setBookingSlot(slot)}
+            />
 
             {/* Smart Suggestions - Show when no full matches but partial matches exist */}
             {suggestions.length > 0 && suggestions.filter(s => s.isFullMatch).length === 0 && (
