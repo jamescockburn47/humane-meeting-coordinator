@@ -14,6 +14,7 @@ import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { AdminDashboard } from './components/AdminDashboard';
 import { JoinGroupPage } from './components/JoinGroupPage';
 import { HowItWorks } from './components/HowItWorks';
+import { SchedulingAssistant } from './components/SchedulingAssistant';
 
 import './index.css';
 
@@ -1009,6 +1010,9 @@ function App() {
           </div>
         )}
       </main>
+      
+      {/* AI Scheduling Assistant */}
+      <SchedulingAssistant />
     </div>
   )
 }

@@ -26,10 +26,19 @@ A privacy-first scheduling tool designed to find the intersection of availabilit
 You need these in your local `.env` and Vercel Project Settings.
 
 ```bash
+# Frontend (prefix with VITE_ for client access)
 VITE_SUPABASE_URL=https://ldlngbfchxnfycwygmqx.supabase.co
 VITE_SUPABASE_ANON_KEY=[Your_Supabase_Key]
 VITE_ORGANISER_CODE=humane2026
+
+# Backend (Vercel Serverless Functions - no VITE_ prefix)
+GEMINI_API_KEY=[Your_Gemini_API_Key]
 ```
+
+To get a Gemini API key:
+1. Go to https://aistudio.google.com/apikey
+2. Create a new API key
+3. Add it to Vercel: Project Settings → Environment Variables → Add `GEMINI_API_KEY`
 
 ## 4. Key Features Implemented (v1)
 1.  **Multi-Window Availability**: Users define "Humane Hours" (e.g. 9-12, 2-5). Supports Regional Weekends (Sun-Thu).
