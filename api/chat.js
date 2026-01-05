@@ -967,7 +967,9 @@ function prepareMeetingBooking(context, slotStart, slotEnd, title) {
 const tools = {
     analyze_timezone_overlap: tool({
         description: 'Analyze the timezone overlap for the current group. Use this when the user asks why there is no overlap, what times would work, or how to find a meeting time.',
-        parameters: z.object({}),
+        parameters: z.object({
+            includeDetails: z.boolean().optional().describe('Include detailed breakdown per member')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
@@ -1008,7 +1010,9 @@ const tools = {
     
     suggest_meeting_format: tool({
         description: 'Suggest alternative meeting formats when a standard meeting is hard to schedule. Good for large groups or extreme timezone spreads.',
-        parameters: z.object({}),
+        parameters: z.object({
+            considerAsync: z.boolean().optional().describe('Consider async options')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
@@ -1016,7 +1020,9 @@ const tools = {
     
     get_invite_link: tool({
         description: 'Get the invite link to share with new members so they can join the group and set their availability.',
-        parameters: z.object({}),
+        parameters: z.object({
+            format: z.enum(['short', 'full']).optional().describe('Link format preference')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
@@ -1024,7 +1030,9 @@ const tools = {
     
     summarize_group: tool({
         description: 'Get a summary of the current group including members, timezones, calendar sync status, and search results.',
-        parameters: z.object({}),
+        parameters: z.object({
+            verbose: z.boolean().optional().describe('Include detailed member info')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
@@ -1075,7 +1083,9 @@ const tools = {
     
     suggest_fair_rotation: tool({
         description: 'Suggest a fair rotation schedule for recurring meetings so the same people don\'t always get the inconvenient times.',
-        parameters: z.object({}),
+        parameters: z.object({
+            weeksToRotate: z.number().optional().describe('Number of weeks to plan rotation for')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
@@ -1083,7 +1093,9 @@ const tools = {
     
     split_by_timezone: tool({
         description: 'Suggest how to split a large group into smaller timezone-based subgroups for easier scheduling.',
-        parameters: z.object({}),
+        parameters: z.object({
+            maxGroupSize: z.number().optional().describe('Maximum members per sub-group')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
@@ -1101,7 +1113,9 @@ const tools = {
     
     send_nudge: tool({
         description: 'Generate reminder messages for members who haven\'t set their availability yet.',
-        parameters: z.object({}),
+        parameters: z.object({
+            urgency: z.enum(['gentle', 'normal', 'urgent']).optional().describe('Tone of the reminder')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
