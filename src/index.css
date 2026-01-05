@@ -1770,6 +1770,67 @@ label {
   font-size: 0.9rem;
 }
 
+.integration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.integration-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+
+.integration-icon {
+  font-size: 1.5rem;
+}
+
+.integration-item strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.integration-item p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.requirements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.requirement-item {
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.requirement-item strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--primary);
+}
+
+.requirement-item ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.requirement-item li {
+  margin-bottom: 0.25rem;
+}
+
 .privacy-link {
   color: var(--primary);
   text-decoration: none;
