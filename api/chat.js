@@ -724,10 +724,10 @@ export default async function handler(req, res) {
             content: msg.content
         }));
 
-        // Select model - Claude 3.5 Haiku preferred, Gemini 2.0 Flash fallback
+        // Select model - Claude 4.5 Haiku preferred (fast, cheap, reliable), Gemini fallback
         const getModel = () => {
             if (useClaudde) {
-                return anthropic('claude-3-5-haiku-latest'); // Fast, smart, reliable
+                return anthropic('claude-haiku-4-5-20250929'); // Claude 4.5 Haiku - fastest, cheapest
             }
             return google('gemini-2.0-flash-001', { apiKey: geminiKey }); // Stable Gemini fallback
         };
