@@ -330,6 +330,13 @@ You have powerful tools - USE THEM:
         }
     }
 
+    // Include busy slot info if available
+    if (context?.busySlots?.length > 0) {
+        prompt += `\n\nCalendar Data: ${context.busySlots.length} busy slots from synced calendars are being considered.`;
+        prompt += `\nThe scheduling algorithm already excludes times when people are busy.`;
+        prompt += `\nIf someone hasn't synced their calendar, they may have conflicts we don't know about.`;
+    }
+
     return prompt;
 }
 
@@ -436,6 +443,7 @@ function summarizeGroup(context) {
     const members = context?.members || [];
     const suggestions = context?.suggestions || [];
     const group = context?.group;
+    const busySlots = context?.busySlots || [];
     
     const fullMatches = suggestions.filter(s => s.isFullMatch);
     const partialMatches = suggestions.filter(s => !s.isFullMatch);
@@ -451,6 +459,13 @@ function summarizeGroup(context) {
     const spread = sortedByTz.length > 0 
         ? sortedByTz[sortedByTz.length - 1].offset - sortedByTz[0].offset 
         : 0;
+
+    // Calendar sync status
+    const membersWithCalendar = new Set(busySlots.map(s => s.email));
+    const calendarStatus = members.map(m => ({
+        name: m.name,
+        hasSyncedCalendar: membersWithCalendar.has(m.email)
+    }));
     
     return {
         groupName: group?.name || 'Unknown',
@@ -459,6 +474,11 @@ function summarizeGroup(context) {
         timezoneSpread: `${spread} hours`,
         easternmost: sortedByTz[sortedByTz.length - 1]?.name,
         westernmost: sortedByTz[0]?.name,
+        calendarData: {
+            totalBusySlots: busySlots.length,
+            membersWithSyncedCalendar: calendarStatus.filter(c => c.hasSyncedCalendar).map(c => c.name),
+            membersWithoutCalendar: calendarStatus.filter(c => !c.hasSyncedCalendar).map(c => c.name)
+        },
         searchResults: {
             fullMatches: fullMatches.length,
             partialMatches: partialMatches.length,
@@ -466,6 +486,75 @@ function summarizeGroup(context) {
                     partialMatches.length > 0 ? 'No perfect time, but options exist' : 
                     'No search run yet'
         }
+    };
+}
+
+function checkCalendarConflicts(context, timeSlotISO) {
+    const busySlots = context?.busySlots || [];
+    const members = context?.members || [];
+    
+    if (!timeSlotISO) {
+        return { error: 'No time slot specified' };
+    }
+    
+    const checkTime = new Date(timeSlotISO);
+    const checkEnd = new Date(checkTime.getTime() + 60 * 60 * 1000); // Assume 1 hour
+    
+    const conflicts = [];
+    const clear = [];
+    const unknown = [];
+    
+    // Group busy slots by email
+    const busyByEmail = {};
+    for (const slot of busySlots) {
+        if (!busyByEmail[slot.email]) busyByEmail[slot.email] = [];
+        busyByEmail[slot.email].push(slot);
+    }
+    
+    for (const member of members) {
+        const memberBusy = busyByEmail[member.email] || [];
+        
+        if (memberBusy.length === 0) {
+            // No calendar data for this member
+            unknown.push({
+                name: member.name,
+                reason: 'No calendar synced'
+            });
+            continue;
+        }
+        
+        // Check if any busy slot conflicts
+        let hasConflict = false;
+        for (const busy of memberBusy) {
+            const busyStart = new Date(busy.start);
+            const busyEnd = new Date(busy.end);
+            
+            if (checkTime < busyEnd && checkEnd > busyStart) {
+                conflicts.push({
+                    name: member.name,
+                    busyFrom: busyStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+                    busyUntil: busyEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                });
+                hasConflict = true;
+                break;
+            }
+        }
+        
+        if (!hasConflict) {
+            clear.push({ name: member.name });
+        }
+    }
+    
+    return {
+        timeChecked: checkTime.toISOString(),
+        conflicts,
+        clear,
+        unknown,
+        summary: conflicts.length === 0 && unknown.length === 0
+            ? 'Everyone is free at this time!'
+            : conflicts.length > 0
+                ? `${conflicts.length} calendar conflict(s) found`
+                : `${unknown.length} member(s) haven't synced their calendar`
     };
 }
 
@@ -529,8 +618,18 @@ const tools = {
     }),
     
     summarize_group: tool({
-        description: 'Get a summary of the current group including members, timezones, and search status. Use this to understand the current situation.',
+        description: 'Get a summary of the current group including members, timezones, calendar sync status, and search results.',
         parameters: z.object({}),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    check_calendar_conflicts: tool({
+        description: 'Check if a specific time slot has calendar conflicts for any member. Use when discussing a particular meeting time.',
+        parameters: z.object({
+            timeSlot: z.string().describe('The time slot to check in ISO format (e.g., "2025-01-10T14:00:00Z")')
+        }),
         execute: async () => {
             return { needsContext: true };
         }
@@ -661,6 +760,9 @@ export default async function handler(req, res) {
                                     break;
                                 case 'summarize_group':
                                     toolResult = summarizeGroup(context);
+                                    break;
+                                case 'check_calendar_conflicts':
+                                    toolResult = checkCalendarConflicts(context, tc.args.timeSlot);
                                     break;
                             }
                             

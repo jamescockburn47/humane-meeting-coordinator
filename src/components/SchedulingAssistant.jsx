@@ -9,6 +9,7 @@ export function SchedulingAssistant({
     groupMembers = [],
     suggestions = [],
     humaneWindows = [],
+    busySlots = [],
     isOpen: controlledIsOpen,
     onOpenChange,
     initialQuestion = null,
@@ -64,7 +65,8 @@ export function SchedulingAssistant({
             email: currentUser.username,
             provider: currentUser.provider,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            humaneWindows: humaneWindows
+            humaneWindows: humaneWindows,
+            calendarConnected: currentUser.provider === 'google' || currentUser.provider === 'microsoft'
         } : null,
         group: currentGroup ? {
             id: currentGroup.id,
@@ -78,6 +80,12 @@ export function SchedulingAssistant({
             email: m.email,
             timezone: m.timezone,
             windows: m.humane_windows
+        })),
+        // Include busy slots from synced calendars
+        busySlots: busySlots.slice(0, 20).map(slot => ({
+            start: slot.start?.dateTime || slot.start_time,
+            end: slot.end?.dateTime || slot.end_time,
+            email: slot.profile_email
         })),
         suggestions: suggestions.slice(0, 10).map(s => ({
             start: s.start,

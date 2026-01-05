@@ -1079,6 +1079,7 @@ function App() {
         groupMembers={currentGroupMembers}
         suggestions={suggestions}
         humaneWindows={humaneWindows}
+        busySlots={myBusySlots}
         isOpen={assistantOpen}
         onOpenChange={(open) => {
           setAssistantOpen(open);
