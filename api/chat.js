@@ -180,9 +180,10 @@ export default async function handler(req, res) {
         }));
 
         // Use Vercel AI SDK with Google provider
-        // Model options: gemini-1.5-flash (fast), gemini-1.5-pro (more capable)
+        // Model: gemini-3-flash-preview (latest, fastest)
+        // Fallback options: gemini-2.5-flash-preview, gemini-1.5-flash
         const { text } = await generateText({
-            model: google('gemini-1.5-flash', { apiKey }),
+            model: google('gemini-3-flash-preview', { apiKey }),
             system: systemPrompt,
             messages: conversationMessages,
         });
