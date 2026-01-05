@@ -739,18 +739,33 @@ export default async function handler(req, res) {
                         for (const tc of step.toolCalls) {
                             let toolResult;
                             
+                            // Safely get args with fallback
+                            const args = tc.args || {};
+                            
                             switch (tc.toolName) {
                                 case 'analyze_timezone_overlap':
                                     toolResult = analyzeTimezoneOverlap(context);
                                     break;
                                 case 'suggest_member_changes':
-                                    toolResult = suggestChangesForMember(context, tc.args.memberName, tc.args.targetTimeUTC);
+                                    if (!args.memberName) {
+                                        toolResult = { error: 'Member name required' };
+                                    } else {
+                                        toolResult = suggestChangesForMember(context, args.memberName, args.targetTimeUTC);
+                                    }
                                     break;
                                 case 'generate_message':
-                                    toolResult = generateMessageForMember(context, tc.args.memberName, tc.args.messageType, tc.args.specificSuggestion);
+                                    if (!args.memberName) {
+                                        toolResult = { error: 'Member name required' };
+                                    } else {
+                                        toolResult = generateMessageForMember(context, args.memberName, args.messageType || 'general', args.specificSuggestion);
+                                    }
                                     break;
                                 case 'get_member_details':
-                                    toolResult = getMemberDetails(context, tc.args.memberName);
+                                    if (!args.memberName) {
+                                        toolResult = { error: 'Member name required' };
+                                    } else {
+                                        toolResult = getMemberDetails(context, args.memberName);
+                                    }
                                     break;
                                 case 'suggest_meeting_format':
                                     toolResult = suggestMeetingFormat(context);
@@ -762,7 +777,11 @@ export default async function handler(req, res) {
                                     toolResult = summarizeGroup(context);
                                     break;
                                 case 'check_calendar_conflicts':
-                                    toolResult = checkCalendarConflicts(context, tc.args.timeSlot);
+                                    if (!args.timeSlot) {
+                                        toolResult = { error: 'Time slot required' };
+                                    } else {
+                                        toolResult = checkCalendarConflicts(context, args.timeSlot);
+                                    }
                                     break;
                             }
                             
