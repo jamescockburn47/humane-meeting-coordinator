@@ -394,3 +394,505 @@ export function analyzeSchedulingResults(suggestions, members) {
 
     return analysis;
 }
+
+/**
+ * Calculate the theoretical timezone overlap window for a group
+ * This finds when all members could potentially meet based on their timezones alone
+ * (ignoring their specific availability windows)
+ * 
+ * @param {Array} members - Array of members with timezone info
+ * @returns {Object} Analysis with golden window, fair times, and suggestions
+ */
+export function calculateTimezoneOverlap(members) {
+    if (!members || members.length === 0) {
+        return { error: 'No members provided' };
+    }
+
+    // Get UTC offsets for each member's timezone
+    const memberTimezones = members.map(m => {
+        const tz = m.timezone || 'UTC';
+        const name = m.display_name || m.name || m.email?.split('@')[0] || 'Unknown';
+        
+        // Get current UTC offset for this timezone
+        const now = new Date();
+        let offset = 0;
+        try {
+            const localTime = toZonedTime(now, tz);
+            // Calculate offset in hours
+            const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
+            const localHours = localTime.getHours() + localTime.getMinutes() / 60;
+            offset = localHours - utcHours;
+            // Handle day boundary
+            if (offset > 12) offset -= 24;
+            if (offset < -12) offset += 24;
+        } catch (e) {
+            console.error(`Error getting offset for ${tz}:`, e);
+        }
+        
+        return { name, email: m.email, timezone: tz, offset, windows: m.humane_windows || [] };
+    });
+
+    // Sort by offset to understand timezone spread
+    const sortedByOffset = [...memberTimezones].sort((a, b) => a.offset - b.offset);
+    const minOffset = sortedByOffset[0].offset;
+    const maxOffset = sortedByOffset[sortedByOffset.length - 1].offset;
+    const timezoneSpread = maxOffset - minOffset;
+
+    // Find the "golden window" - hours that are 7am-10pm for everyone
+    // For each UTC hour (0-23), check what local time it is for each member
+    const hourScores = [];
+    for (let utcHour = 0; utcHour < 24; utcHour++) {
+        let totalScore = 0;
+        const memberHours = [];
+        
+        for (const member of memberTimezones) {
+            let localHour = (utcHour + member.offset + 24) % 24;
+            const score = calculateHourFairness(localHour);
+            totalScore += score;
+            memberHours.push({
+                name: member.name,
+                localHour,
+                score,
+                description: describeHour(localHour)
+            });
+        }
+        
+        hourScores.push({
+            utcHour,
+            averageScore: totalScore / members.length,
+            totalScore,
+            memberHours,
+            isGolden: memberHours.every(m => m.score <= 1) // Everyone in reasonable hours
+        });
+    }
+
+    // Sort by best (lowest) score
+    const rankedHours = [...hourScores].sort((a, b) => a.averageScore - b.averageScore);
+    const goldenHours = hourScores.filter(h => h.isGolden);
+    const bestHours = rankedHours.slice(0, 5);
+
+    // Generate human-readable analysis
+    const analysis = {
+        memberTimezones,
+        timezoneSpread: {
+            hours: timezoneSpread,
+            description: describeTimezoneSpread(timezoneSpread),
+            easternmost: sortedByOffset[sortedByOffset.length - 1],
+            westernmost: sortedByOffset[0]
+        },
+        goldenWindow: goldenHours.length > 0 ? {
+            exists: true,
+            utcHours: goldenHours.map(h => h.utcHour),
+            description: `${goldenHours.length} hour(s) when everyone is in reasonable hours (7am-10pm)`
+        } : {
+            exists: false,
+            description: 'No time when everyone is in reasonable hours (7am-10pm)'
+        },
+        bestHours: bestHours.map(h => ({
+            utcHour: h.utcHour,
+            score: h.averageScore.toFixed(2),
+            isGolden: h.isGolden,
+            memberTimes: h.memberHours.map(m => `${m.name}: ${formatHour(m.localHour)} (${m.description})`)
+        })),
+        suggestions: generateTimezonesuggestions(memberTimezones, goldenHours, bestHours, timezoneSpread)
+    };
+
+    return analysis;
+}
+
+/**
+ * Calculate fairness score for a specific hour (0 = perfect, higher = worse)
+ */
+function calculateHourFairness(hour) {
+    if (hour >= 9 && hour <= 17) return 0;      // Core business hours - perfect
+    if (hour >= 8 && hour <= 18) return 0.5;    // Extended business hours - good
+    if (hour >= 7 && hour <= 21) return 1;      // Early morning/evening - acceptable
+    if (hour >= 6 && hour <= 22) return 2;      // Early bird/night owl territory
+    return 5;                                    // Unsociable hours (before 6am or after 10pm)
+}
+
+/**
+ * Describe an hour in human terms
+ */
+function describeHour(hour) {
+    if (hour >= 0 && hour < 6) return 'night';
+    if (hour >= 6 && hour < 9) return 'early morning';
+    if (hour >= 9 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 14) return 'midday';
+    if (hour >= 14 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    return 'late night';
+}
+
+/**
+ * Format hour as readable time
+ */
+function formatHour(hour) {
+    const h = Math.floor(hour);
+    const m = Math.round((hour - h) * 60);
+    const period = h >= 12 ? 'pm' : 'am';
+    const displayHour = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+    return m > 0 ? `${displayHour}:${m.toString().padStart(2, '0')}${period}` : `${displayHour}${period}`;
+}
+
+/**
+ * Describe timezone spread
+ */
+function describeTimezoneSpread(hours) {
+    if (hours <= 3) return 'Narrow spread - easy to find overlap';
+    if (hours <= 6) return 'Moderate spread - some flexibility needed';
+    if (hours <= 10) return 'Wide spread - limited overlap windows';
+    if (hours <= 14) return 'Very wide spread - challenging, may need early/late times';
+    return 'Extreme spread - nearly opposite sides of the world';
+}
+
+/**
+ * Generate specific suggestions based on timezone analysis
+ */
+function generateTimezonesuggestions(members, goldenHours, bestHours, spread) {
+    const suggestions = [];
+
+    if (goldenHours.length === 0) {
+        suggestions.push({
+            type: 'no_golden',
+            priority: 'high',
+            message: 'No time works for everyone during normal hours. Someone will need to stretch their availability.'
+        });
+
+        // Identify who would need to adjust for the best hour
+        if (bestHours.length > 0) {
+            const best = bestHours[0];
+            const whoNeedsToAdjust = best.memberHours
+                .filter(m => m.score > 1)
+                .map(m => ({
+                    name: m.name,
+                    wouldBe: `${formatHour(m.localHour)} (${m.description})`,
+                    adjustment: suggestAdjustment(m.localHour)
+                }));
+
+            if (whoNeedsToAdjust.length > 0) {
+                suggestions.push({
+                    type: 'adjustment_needed',
+                    priority: 'high',
+                    forBestHour: formatHour(best.utcHour) + ' UTC',
+                    adjustments: whoNeedsToAdjust
+                });
+            }
+        }
+    } else if (goldenHours.length <= 2) {
+        suggestions.push({
+            type: 'narrow_golden',
+            priority: 'medium',
+            message: `Only ${goldenHours.length} hour(s) work for everyone. Try to schedule within ${goldenHours.map(h => formatHour(h.utcHour) + ' UTC').join(' or ')}.`
+        });
+    }
+
+    if (spread > 10) {
+        suggestions.push({
+            type: 'extreme_spread',
+            priority: 'info',
+            message: 'Your group spans ' + spread.toFixed(0) + ' hours. Consider rotating meeting times or splitting into regional sub-meetings.'
+        });
+    }
+
+    return suggestions;
+}
+
+/**
+ * Suggest what adjustment a member could make based on the hour they'd need to meet
+ */
+function suggestAdjustment(localHour) {
+    if (localHour >= 22 || localHour < 6) {
+        return `Would need to add a late night/early morning window`;
+    }
+    if (localHour >= 6 && localHour < 7) {
+        return `Would need to add 6-7am to availability`;
+    }
+    if (localHour >= 21 && localHour < 22) {
+        return `Would need to add 9-10pm to availability`;
+    }
+    return `Would need to adjust their hours`;
+}
+
+/**
+ * Given a target meeting time, suggest what each unavailable member would need to change
+ * 
+ * @param {Array} members - All group members
+ * @param {string} targetSlotISO - Target meeting time in ISO format
+ * @param {number} duration - Meeting duration in minutes
+ * @returns {Array} Suggestions for each member who can't make it
+ */
+export function suggestMemberAdjustments(members, targetSlotISO, duration = 60) {
+    const targetTime = new Date(targetSlotISO);
+    const suggestions = [];
+
+    for (const member of members) {
+        const tz = member.timezone || 'UTC';
+        const name = member.display_name || member.name || member.email?.split('@')[0] || 'Unknown';
+        
+        // Convert target time to member's local timezone
+        let localTime;
+        try {
+            localTime = toZonedTime(targetTime, tz);
+        } catch (e) {
+            localTime = new Date(targetTime);
+        }
+
+        const localHour = localTime.getHours();
+        const localMinutes = localTime.getMinutes();
+        const endHour = localHour + (duration / 60);
+        const dayOfWeek = localTime.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+        // Check if member has this time in their windows
+        const windows = member.humane_windows || [];
+        let canMakeIt = false;
+        let matchingWindow = null;
+
+        for (const win of windows) {
+            if (!checkDayType(win.type, dayOfWeek)) continue;
+            
+            const [hS, mS] = (win.start || "09:00").split(':').map(Number);
+            const [hE, mE] = (win.end || "17:00").split(':').map(Number);
+            const winStart = hS + mS / 60;
+            const winEnd = hE + mE / 60;
+            
+            const slotStart = localHour + localMinutes / 60;
+            
+            if (slotStart >= winStart && endHour <= winEnd) {
+                canMakeIt = true;
+                matchingWindow = win;
+                break;
+            }
+        }
+
+        if (canMakeIt) {
+            suggestions.push({
+                email: member.email,
+                name,
+                canMakeIt: true,
+                localTime: formatTimeForDisplay(localTime),
+                timezone: tz
+            });
+        } else {
+            // Generate specific suggestion
+            const localTimeStr = formatTimeForDisplay(localTime);
+            const suggestion = generateSpecificSuggestion(localHour, endHour, isWeekend, windows);
+            
+            suggestions.push({
+                email: member.email,
+                name,
+                canMakeIt: false,
+                localTime: localTimeStr,
+                timezone: tz,
+                suggestion: suggestion.text,
+                windowToAdd: suggestion.window,
+                impact: suggestion.impact
+            });
+        }
+    }
+
+    return suggestions;
+}
+
+/**
+ * Format a date for display
+ */
+function formatTimeForDisplay(date) {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const period = hours >= 12 ? 'pm' : 'am';
+    const displayHour = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const day = dayNames[date.getDay()];
+    const dateNum = date.getDate();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[date.getMonth()];
+    
+    const timeStr = minutes > 0 
+        ? `${displayHour}:${minutes.toString().padStart(2, '0')}${period}`
+        : `${displayHour}${period}`;
+    
+    return `${day} ${dateNum} ${month}, ${timeStr}`;
+}
+
+/**
+ * Generate a specific suggestion for what window to add
+ */
+function generateSpecificSuggestion(startHour, endHour, isWeekend, existingWindows) {
+    // Round to nice window boundaries
+    const windowStart = Math.floor(startHour);
+    const windowEnd = Math.ceil(endHour);
+    
+    const startStr = `${windowStart.toString().padStart(2, '0')}:00`;
+    const endStr = `${windowEnd.toString().padStart(2, '0')}:00`;
+    
+    // Determine the right day type
+    let dayType = isWeekend ? 'weekend' : 'weekday';
+    
+    // Check if they already have windows - suggest extending vs adding new
+    const hasWindows = existingWindows && existingWindows.length > 0;
+    
+    let text, impact;
+    
+    if (startHour < 7) {
+        text = `Add an early morning window (${startStr}-${endStr})`;
+        impact = 'This is early but would enable this meeting time';
+    } else if (startHour >= 21) {
+        text = `Add a late evening window (${startStr}-${endStr})`;
+        impact = 'This is late but would enable this meeting time';
+    } else if (hasWindows) {
+        text = `Extend your availability to include ${startStr}-${endStr}`;
+        impact = 'A small adjustment that could open up new options';
+    } else {
+        text = `Add ${startStr}-${endStr} on ${isWeekend ? 'weekends' : 'weekdays'}`;
+        impact = 'This would enable meetings at this time';
+    }
+
+    return {
+        text,
+        window: { start: startStr, end: endStr, type: dayType },
+        impact
+    };
+}
+
+/**
+ * Find fair times across the group - times that minimize inconvenience for everyone
+ * 
+ * @param {Array} members - Group members with timezone info
+ * @param {string} startDate - Start of date range (YYYY-MM-DD)
+ * @param {string} endDate - End of date range (YYYY-MM-DD)
+ * @param {number} duration - Meeting duration in minutes
+ * @returns {Array} Ranked list of fair time slots
+ */
+export function findFairTimes(members, startDate, endDate, duration = 60) {
+    if (!members || members.length === 0) return [];
+
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    
+    const startScan = new Date(Date.UTC(startYear, startMonth - 1, startDay, 0, 0, 0));
+    const endScan = new Date(Date.UTC(endYear, endMonth - 1, endDay, 23, 59, 0));
+
+    const fairSlots = [];
+    const step = 30; // Check every 30 minutes
+    let currentTime = new Date(startScan);
+
+    while (currentTime < endScan) {
+        const slotEnd = addMinutes(currentTime, duration);
+        
+        // Calculate fairness score for this slot
+        let totalInconvenience = 0;
+        const memberDetails = [];
+        let anyoneInUnsociableHours = false;
+
+        for (const member of members) {
+            const tz = member.timezone || 'UTC';
+            const name = member.display_name || member.name || member.email?.split('@')[0] || 'Unknown';
+            
+            let localTime;
+            try {
+                localTime = toZonedTime(currentTime, tz);
+            } catch (e) {
+                localTime = new Date(currentTime);
+            }
+
+            const localHour = localTime.getHours() + localTime.getMinutes() / 60;
+            const score = calculateHourFairness(localHour);
+            
+            if (score >= 5) anyoneInUnsociableHours = true;
+            totalInconvenience += score;
+            
+            memberDetails.push({
+                name,
+                localTime: formatTimeForDisplay(localTime),
+                localHour,
+                score,
+                description: describeHour(localHour)
+            });
+        }
+
+        // Only include if no one is in truly unsociable hours (midnight-6am)
+        if (!anyoneInUnsociableHours) {
+            fairSlots.push({
+                start: currentTime.toISOString(),
+                end: slotEnd.toISOString(),
+                fairnessScore: totalInconvenience / members.length,
+                totalInconvenience,
+                memberDetails,
+                isOptimal: totalInconvenience === 0
+            });
+        }
+
+        currentTime = addMinutes(currentTime, step);
+    }
+
+    // Sort by fairness score (lower is better) and return top 20
+    return fairSlots
+        .sort((a, b) => a.fairnessScore - b.fairnessScore)
+        .slice(0, 20);
+}
+
+/**
+ * Generate a copy-paste message for a specific member
+ * 
+ * @param {Object} params - Message parameters
+ * @returns {string} Ready-to-send message
+ */
+export function generateMemberMessage(params) {
+    const { 
+        memberName, 
+        groupName, 
+        organiserName,
+        suggestionType,
+        specificSuggestion,
+        inviteLink,
+        otherMembers = []
+    } = params;
+
+    const firstName = memberName.split(' ')[0];
+    const othersText = otherMembers.length > 0 
+        ? `with ${otherMembers.slice(0, 2).join(', ')}${otherMembers.length > 2 ? ` and ${otherMembers.length - 2} others` : ''}`
+        : '';
+
+    switch (suggestionType) {
+        case 'expand_hours':
+            return `Hi ${firstName}!
+
+We're trying to find a time for ${groupName || 'a meeting'}${othersText ? ' ' + othersText : ''}. The timezone spread is tricky!
+
+${specificSuggestion || 'Would you be able to add some flexibility to your availability hours?'} That would open up some options that work for everyone.
+
+No pressure if that doesn't work - let me know and we'll figure something else out.
+
+${inviteLink ? `Update your times here: ${inviteLink}` : ''}
+
+Thanks!
+${organiserName || ''}`.trim();
+
+        case 'try_date':
+            return `Hi ${firstName}!
+
+We're looking at some dates for ${groupName || 'our meeting'}${othersText ? ' ' + othersText : ''}.
+
+${specificSuggestion || 'Could you check your availability for the suggested dates?'}
+
+${inviteLink ? `Add your availability here: ${inviteLink}` : ''}
+
+Thanks!
+${organiserName || ''}`.trim();
+
+        case 'general':
+        default:
+            return `Hi ${firstName}!
+
+We're scheduling ${groupName || 'a meeting'}${othersText ? ' ' + othersText : ''} and could use your input on times that work for you.
+
+${specificSuggestion || ''}
+
+${inviteLink ? `You can set your availability here: ${inviteLink}` : ''}
+
+Thanks!
+${organiserName || ''}`.trim();
+    }
+}

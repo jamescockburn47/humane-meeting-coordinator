@@ -1,150 +1,365 @@
-import { generateText } from 'ai';
+import { generateText, tool } from 'ai';
 import { google } from '@ai-sdk/google';
+import { z } from 'zod';
 
-// Build system prompt with context
-function buildSystemPrompt(context) {
-    let prompt = `You are a scheduling assistant for Humane Calendar. You ONLY help with:
-- Understanding how the app works
-- Finding meeting times that work for everyone
-- Explaining timezone differences
-- Suggesting availability changes
-- Privacy questions about the app
+/**
+ * AI Scheduling Agent - A proper AI agent with tools for timezone analysis,
+ * member suggestions, and message generation
+ */
 
-STRICT RULES:
-1. DO NOT discuss topics unrelated to scheduling or this app
-2. If asked about anything else, politely redirect: "I can only help with scheduling. What would you like to know about finding a meeting time?"
-3. Keep responses SHORT (2-3 sentences max unless explaining a specific process)
-4. Be direct and actionable
-5. Use British English
-
-## How Humane Calendar Works
-- Each person sets their available times (in their own timezone)
-- The app finds where everyone overlaps
-- The organiser picks a slot and sends a calendar invite
-- Invites include a Google Meet or Teams video link
-
-## Key Concepts
-- "Humane Windows": The hours someone is willing to meet (e.g., 9am-5pm weekdays)
-- "Full Match": A time when EVERYONE in the group is available
-- "Partial Match": A time when some but not all members are available
-- Timezones: Each person's times are converted to find true overlaps`;
-
-    // Add user context if available
-    if (context?.user) {
-        prompt += `\n\n## Current User
-- Name: ${context.user.name || 'Unknown'}
-- Timezone: ${context.user.timezone || 'Unknown'}
-- Their availability windows: ${JSON.stringify(context.user.humaneWindows || [])}`;
+// Tool implementations that work with the context
+function analyzeTimezoneOverlap(context) {
+    if (!context?.members?.length) {
+        return { error: 'No group members to analyze' };
     }
 
-    // Add group context if available
-    if (context?.group) {
-        prompt += `\n\n## Current Group: "${context.group.name}"
-- ${context.group.memberCount} members`;
-    }
+    const members = context.members;
+    
+    // Get UTC offsets for each member
+    const memberTimezones = members.map(m => {
+        const name = m.name || 'Unknown';
+        const tz = m.timezone || 'UTC';
+        
+        // Estimate offset from timezone name
+        const offset = estimateTimezoneOffset(tz);
+        
+        return { name, timezone: tz, offset, windows: m.windows || [] };
+    });
 
-    // Add member details
-    if (context?.members?.length > 0) {
-        prompt += `\n\n## Group Members`;
-        context.members.forEach((m, i) => {
-            prompt += `\n${i + 1}. ${m.name} (${m.timezone || 'Unknown timezone'})`;
-            if (m.windows?.length > 0) {
-                const windowDesc = m.windows.map(w => `${w.start}-${w.end} ${w.type}`).join(', ');
-                prompt += ` - Available: ${windowDesc}`;
-            }
+    // Sort by offset
+    const sortedByOffset = [...memberTimezones].sort((a, b) => a.offset - b.offset);
+    const minOffset = sortedByOffset[0]?.offset || 0;
+    const maxOffset = sortedByOffset[sortedByOffset.length - 1]?.offset || 0;
+    const timezoneSpread = Math.abs(maxOffset - minOffset);
+
+    // Find best hours (UTC) where everyone is in reasonable hours
+    const hourAnalysis = [];
+    for (let utcHour = 0; utcHour < 24; utcHour++) {
+        let totalScore = 0;
+        const memberHours = [];
+        
+        for (const member of memberTimezones) {
+            const localHour = (utcHour + member.offset + 24) % 24;
+            const score = getHourScore(localHour);
+            totalScore += score;
+            memberHours.push({
+                name: member.name,
+                localHour: Math.round(localHour),
+                score,
+                timeDescription: describeLocalTime(localHour)
+            });
+        }
+        
+        hourAnalysis.push({
+            utcHour,
+            avgScore: totalScore / members.length,
+            isGolden: memberHours.every(m => m.score <= 1),
+            memberHours
         });
     }
 
-    // Add suggestion analysis
+    // Get best hours
+    const goldenHours = hourAnalysis.filter(h => h.isGolden);
+    const bestHours = [...hourAnalysis].sort((a, b) => a.avgScore - b.avgScore).slice(0, 5);
+
+    // Generate insights
+    let insight = '';
+    if (goldenHours.length > 0) {
+        insight = `Good news! There are ${goldenHours.length} hour(s) when everyone is in reasonable hours (7am-10pm). Best times are around ${goldenHours.slice(0, 3).map(h => formatUTCHour(h.utcHour)).join(', ')} UTC.`;
+    } else {
+        insight = `Your group spans ${timezoneSpread} hours across timezones. No time puts everyone in standard hours, but the least disruptive options are around ${bestHours.slice(0, 2).map(h => formatUTCHour(h.utcHour)).join(' or ')} UTC.`;
+    }
+
+    // Who would need to adjust
+    const adjustments = [];
+    if (bestHours.length > 0) {
+        const best = bestHours[0];
+        for (const mh of best.memberHours) {
+            if (mh.score > 1) {
+                adjustments.push({
+                    member: mh.name,
+                    wouldNeedToMeet: `${formatHour(mh.localHour)} (${mh.timeDescription})`,
+                    suggestion: getSuggestionForHour(mh.localHour)
+                });
+            }
+        }
+    }
+
+    return {
+        timezoneSpread: `${timezoneSpread} hours`,
+        spreadDescription: describeSpread(timezoneSpread),
+        members: memberTimezones.map(m => ({ name: m.name, timezone: m.timezone })),
+        goldenWindowExists: goldenHours.length > 0,
+        goldenHoursUTC: goldenHours.map(h => formatUTCHour(h.utcHour)),
+        bestHoursUTC: bestHours.slice(0, 3).map(h => ({
+            time: formatUTCHour(h.utcHour),
+            memberTimes: h.memberHours.map(m => `${m.name}: ${formatHour(m.localHour)} (${m.timeDescription})`)
+        })),
+        insight,
+        adjustmentsNeeded: adjustments
+    };
+}
+
+function suggestChangesForMember(context, memberName, targetTimeUTC) {
+    const members = context?.members || [];
+    const member = members.find(m => 
+        m.name?.toLowerCase().includes(memberName.toLowerCase())
+    );
+    
+    if (!member) {
+        return { error: `Could not find member "${memberName}"` };
+    }
+
+    const offset = estimateTimezoneOffset(member.timezone || 'UTC');
+    const targetHour = targetTimeUTC ? parseInt(targetTimeUTC) : 9;
+    const localHour = (targetHour + offset + 24) % 24;
+    
+    // What window would they need
+    const startHour = Math.floor(localHour);
+    const endHour = startHour + 1;
+    
+    const suggestion = {
+        memberName: member.name,
+        timezone: member.timezone,
+        currentWindows: member.windows || [],
+        targetTimeUTC: formatUTCHour(targetHour),
+        theirLocalTime: `${formatHour(localHour)} (${describeLocalTime(localHour)})`,
+        suggestion: getSuggestionForHour(localHour),
+        windowToAdd: `${startHour.toString().padStart(2, '0')}:00-${(endHour + 1).toString().padStart(2, '0')}:00`
+    };
+
+    return suggestion;
+}
+
+function generateMessageForMember(context, memberName, messageType, specificSuggestion) {
+    const members = context?.members || [];
+    const groupName = context?.group?.name || 'our meeting';
+    const organiser = context?.user?.name || 'the organiser';
+    
+    const member = members.find(m => 
+        m.name?.toLowerCase().includes(memberName.toLowerCase())
+    );
+    
+    const firstName = member?.name?.split(' ')[0] || memberName;
+    const otherMembers = members.filter(m => m.name !== member?.name).map(m => m.name);
+    const othersText = otherMembers.length > 0 
+        ? `with ${otherMembers.slice(0, 2).join(' and ')}${otherMembers.length > 2 ? ` and ${otherMembers.length - 2} others` : ''}`
+        : '';
+
+    let message = '';
+    
+    switch (messageType) {
+        case 'expand_hours':
+            message = `Hi ${firstName}!
+
+We're trying to find a time for ${groupName}${othersText ? ' ' + othersText : ''}. The timezone spread is a bit tricky!
+
+${specificSuggestion || 'Would you be able to add some flexibility to your availability hours?'} That would open up some options that work for everyone.
+
+No pressure if that doesn't work for you - just let me know and we'll figure something else out.
+
+Thanks!
+${organiser}`;
+            break;
+
+        case 'try_date':
+            message = `Hi ${firstName}!
+
+We're looking at some dates for ${groupName}${othersText ? ' ' + othersText : ''}.
+
+${specificSuggestion || 'Could you check your availability for the suggested dates?'}
+
+Thanks!
+${organiser}`;
+            break;
+
+        default:
+            message = `Hi ${firstName}!
+
+We're scheduling ${groupName}${othersText ? ' ' + othersText : ''} and could use your input on times.
+
+${specificSuggestion || 'Let me know what works for you!'}
+
+Thanks!
+${organiser}`;
+    }
+
+    return {
+        recipientName: firstName,
+        messageType,
+        message: message.trim(),
+        copyButtonText: 'Copy message'
+    };
+}
+
+// Helper functions
+function estimateTimezoneOffset(tz) {
+    // Common timezone offsets
+    const offsets = {
+        'UTC': 0, 'GMT': 0,
+        'Europe/London': 0, 'Europe/Dublin': 0,
+        'Europe/Paris': 1, 'Europe/Berlin': 1, 'Europe/Rome': 1, 'Europe/Madrid': 1,
+        'Europe/Moscow': 3, 'Europe/Istanbul': 3,
+        'Asia/Dubai': 4,
+        'Asia/Kolkata': 5.5, 'Asia/Mumbai': 5.5,
+        'Asia/Bangkok': 7, 'Asia/Jakarta': 7,
+        'Asia/Singapore': 8, 'Asia/Hong_Kong': 8, 'Asia/Shanghai': 8, 'Asia/Taipei': 8,
+        'Asia/Tokyo': 9, 'Asia/Seoul': 9,
+        'Australia/Sydney': 10, 'Australia/Melbourne': 10,
+        'Pacific/Auckland': 12, 'NZ': 12,
+        'America/New_York': -5, 'America/Toronto': -5, 'US/Eastern': -5,
+        'America/Chicago': -6, 'US/Central': -6,
+        'America/Denver': -7, 'US/Mountain': -7,
+        'America/Los_Angeles': -8, 'US/Pacific': -8, 'America/Vancouver': -8,
+        'America/Anchorage': -9,
+        'Pacific/Honolulu': -10
+    };
+    
+    return offsets[tz] || 0;
+}
+
+function getHourScore(hour) {
+    if (hour >= 9 && hour <= 17) return 0;      // Core hours
+    if (hour >= 8 && hour <= 18) return 0.5;    // Extended
+    if (hour >= 7 && hour <= 21) return 1;      // Early/late but ok
+    if (hour >= 6 && hour <= 22) return 2;      // Stretch
+    return 5;                                    // Unsociable
+}
+
+function describeLocalTime(hour) {
+    if (hour >= 0 && hour < 6) return 'night';
+    if (hour >= 6 && hour < 9) return 'early morning';
+    if (hour >= 9 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 14) return 'midday';
+    if (hour >= 14 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    return 'late night';
+}
+
+function formatHour(hour) {
+    const h = Math.round(hour);
+    const period = h >= 12 ? 'pm' : 'am';
+    const displayHour = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+    return `${displayHour}${period}`;
+}
+
+function formatUTCHour(hour) {
+    return `${hour.toString().padStart(2, '0')}:00 UTC`;
+}
+
+function describeSpread(hours) {
+    if (hours <= 3) return 'narrow - easy to find overlap';
+    if (hours <= 6) return 'moderate - some flexibility needed';
+    if (hours <= 10) return 'wide - limited windows';
+    if (hours <= 14) return 'very wide - challenging';
+    return 'extreme - nearly opposite sides of the world';
+}
+
+function getSuggestionForHour(localHour) {
+    if (localHour >= 22 || localHour < 6) {
+        return 'Would need to add a late night or very early morning slot';
+    }
+    if (localHour >= 6 && localHour < 8) {
+        return 'Would need to add an early morning slot (before 8am)';
+    }
+    if (localHour >= 20 && localHour < 22) {
+        return 'Would need to add an evening slot (after 8pm)';
+    }
+    return 'Should be able to accommodate with minor adjustments';
+}
+
+// Build enhanced system prompt
+function buildSystemPrompt(context) {
+    let prompt = `You are an AI scheduling agent for Humane Calendar. You help people find meeting times across timezones.
+
+## YOUR CAPABILITIES
+You have access to tools that can:
+1. **analyze_timezone_overlap** - Analyze the group's timezone spread and find optimal meeting hours
+2. **suggest_member_changes** - Get specific suggestions for what a member should change
+3. **generate_message** - Create a copy-paste message to send to a member
+
+## HOW TO RESPOND
+
+When someone asks about finding times or why there's no overlap:
+1. ALWAYS use the analyze_timezone_overlap tool first
+2. Explain the timezone situation clearly
+3. If someone needs to adjust, offer to generate a message for them
+
+When someone asks for a message:
+1. Use generate_message tool
+2. Present the message in a copyable format
+3. Keep tone friendly and non-demanding
+
+## RULES
+1. ONLY discuss scheduling topics. Redirect other questions politely.
+2. Be concise - 2-3 sentences for simple questions
+3. Use British English
+4. Never suggest times between midnight-6am unless specifically asked
+5. Be fair - don't always ask the same person to adjust
+6. When presenting messages, format them clearly so they're easy to copy
+
+## CONTEXT`;
+
+    if (context?.user) {
+        prompt += `\n\nCurrent User: ${context.user.name || 'Unknown'} (${context.user.timezone || 'Unknown timezone'})`;
+    }
+
+    if (context?.group) {
+        prompt += `\nGroup: "${context.group.name}" with ${context.group.memberCount} members`;
+    }
+
+    if (context?.members?.length > 0) {
+        prompt += `\n\nGroup Members:`;
+        context.members.forEach((m, i) => {
+            prompt += `\n${i + 1}. ${m.name} - ${m.timezone || 'Unknown timezone'}`;
+        });
+    }
+
     if (context?.suggestions?.length > 0) {
         const fullMatches = context.suggestions.filter(s => s.isFullMatch);
-        const partialMatches = context.suggestions.filter(s => !s.isFullMatch);
-
-        prompt += `\n\n## Current Search Results`;
-        
         if (fullMatches.length > 0) {
-            prompt += `\n\nFULL MATCHES (everyone available): ${fullMatches.length} times found`;
-            fullMatches.slice(0, 3).forEach(s => {
-                const date = new Date(s.start);
-                prompt += `\n- ${date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} at ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
-            });
+            prompt += `\n\nSearch Results: ${fullMatches.length} times found when everyone is available!`;
         } else {
-            prompt += `\n\nNO FULL MATCHES - no time works for everyone`;
-        }
-
-        // Analyze who is blocking (calculate once, use in multiple places)
-        let sortedBlockers = [];
-        if (partialMatches.length > 0) {
-            prompt += `\n\nPARTIAL MATCHES: ${partialMatches.length} times where some people are available`;
-            
-            const blockerCount = {};
-            partialMatches.forEach(s => {
-                (s.unavailable || []).forEach(name => {
-                    blockerCount[name] = (blockerCount[name] || 0) + 1;
-                });
-            });
-            
-            sortedBlockers = Object.entries(blockerCount).sort((a, b) => b[1] - a[1]);
-            if (sortedBlockers.length > 0) {
-                prompt += `\n\nWho is unavailable most often:`;
-                sortedBlockers.forEach(([name, count]) => {
-                    prompt += `\n- ${name}: unavailable for ${count} of ${partialMatches.length} partial slots`;
-                });
-            }
-        }
-
-        // Suggest actions based on analysis
-        prompt += `\n\n## What You Should Suggest`;
-        if (fullMatches.length > 0) {
-            prompt += `\n- Encourage them to pick a full match slot and send the invite`;
-            prompt += `\n- Explain they can click on a time slot to see the booking form`;
-        } else if (partialMatches.length > 0) {
-            prompt += `\n- Explain that no time works for everyone`;
-            if (sortedBlockers.length > 0) {
-                const topBlocker = sortedBlockers[0];
-                prompt += `\n- Suggest asking ${topBlocker[0]} if they can adjust their availability`;
-                prompt += `\n- Or suggest the organiser expands the date range`;
-            }
-            prompt += `\n- They can still send an invite to a partial slot if needed`;
-        } else {
-            prompt += `\n- Suggest clicking "Search" to find available times`;
-            prompt += `\n- Make sure the date range covers enough days`;
+            prompt += `\n\nSearch Results: No times when everyone is available. ${context.suggestions.length} partial matches found.`;
         }
     }
-
-    // Add member-specific suggestions based on their timezones
-    if (context?.members?.length > 1) {
-        prompt += `\n\n## Timezone Analysis for Smart Suggestions`;
-        
-        // Find timezone spread
-        const timezones = context.members.map(m => m.timezone).filter(Boolean);
-        const uniqueTimezones = [...new Set(timezones)];
-        
-        if (uniqueTimezones.length > 1) {
-            prompt += `\nGroup spans ${uniqueTimezones.length} timezones: ${uniqueTimezones.join(', ')}`;
-            prompt += `\n\nWhen suggesting times to the user:`;
-            prompt += `\n- For groups spanning Asia + Europe: try 08:00-10:00 Europe time (afternoon in Asia)`;
-            prompt += `\n- For groups spanning Europe + Americas: try 14:00-17:00 Europe time (morning in Americas)`;
-            prompt += `\n- For groups spanning Asia + Americas: this is hardest - try early morning Americas or late evening Asia`;
-            prompt += `\n- Always suggest they might try adding an extra availability window at the edge of their day`;
-        }
-    }
-
-    prompt += `\n\n## Changing Availability
-To change availability:
-1. Go to Dashboard and find "My Humane Hours"
-2. Add or edit availability windows (the hours you're willing to meet)
-3. You can set different times for weekdays vs weekends
-4. Check "Include overnight slots" if you're willing to meet between midnight and 6am
-5. Click "Save & Sync" and search again
-
-If someone else needs to change their availability, they should revisit their invite link or log in and update their settings.
-
-## IMPORTANT: Night Protection
-By default, we filter out slots between midnight and 6am in the user's local time. If they need those hours, they must check the "Include overnight slots" option in their settings.`;
 
     return prompt;
 }
+
+// Define tools using Vercel AI SDK format
+const tools = {
+    analyze_timezone_overlap: tool({
+        description: 'Analyze the timezone overlap for the current group. Use this when the user asks why there is no overlap, what times would work, or how to find a meeting time.',
+        parameters: z.object({}),
+        execute: async (params, { context }) => {
+            return analyzeTimezoneOverlap(context);
+        }
+    }),
+    
+    suggest_member_changes: tool({
+        description: 'Get specific suggestions for what changes a particular member should make to their availability.',
+        parameters: z.object({
+            memberName: z.string().describe('The name of the member to get suggestions for'),
+            targetTimeUTC: z.string().optional().describe('Optional target time in UTC (e.g., "14" for 2pm UTC)')
+        }),
+        execute: async ({ memberName, targetTimeUTC }, { context }) => {
+            return suggestChangesForMember(context, memberName, targetTimeUTC);
+        }
+    }),
+    
+    generate_message: tool({
+        description: 'Generate a friendly copy-paste message to send to a group member asking them to adjust their availability.',
+        parameters: z.object({
+            memberName: z.string().describe('The name of the member to write the message for'),
+            messageType: z.enum(['expand_hours', 'try_date', 'general']).describe('Type of message: expand_hours (ask to add hours), try_date (check specific dates), or general'),
+            specificSuggestion: z.string().optional().describe('Optional specific suggestion to include in the message')
+        }),
+        execute: async ({ memberName, messageType, specificSuggestion }, { context }) => {
+            return generateMessageForMember(context, memberName, messageType, specificSuggestion);
+        }
+    })
+};
 
 export default async function handler(req, res) {
     // CORS headers
@@ -163,51 +378,76 @@ export default async function handler(req, res) {
     try {
         const { messages, context } = req.body;
 
-        // Check for API key (GOOGLE_GENERATIVE_AI_API_KEY is the standard name for @ai-sdk/google)
         const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
 
         if (!apiKey) {
-            console.error("No GOOGLE_GENERATIVE_AI_API_KEY or GEMINI_API_KEY found in environment");
+            console.error("No API key found");
             return res.status(500).json({ error: "API key not configured" });
         }
 
-        // Build dynamic system prompt with context
         const systemPrompt = buildSystemPrompt(context);
 
-        // Build conversation messages
         const conversationMessages = messages.map(msg => ({
             role: msg.role,
             content: msg.content
         }));
 
-        // Use Vercel AI SDK with Google provider
-        // Try gemini-2.0-flash-001 (stable) - gemini-3 may have availability issues
-        const { text } = await generateText({
+        // Use generateText with tools
+        const result = await generateText({
             model: google('gemini-2.0-flash-001', { apiKey }),
             system: systemPrompt,
             messages: conversationMessages,
+            tools,
+            toolChoice: 'auto',
+            maxSteps: 5, // Allow multiple tool calls
+            // Pass context to tools via experimental_context
+            experimental_toolCallStreaming: false
         });
 
-        return res.status(200).json({ response: text });
+        // Collect tool results to include in response
+        const toolResults = [];
+        if (result.steps) {
+            for (const step of result.steps) {
+                if (step.toolCalls) {
+                    for (const tc of step.toolCalls) {
+                        // Execute tool with context
+                        let toolResult;
+                        if (tc.toolName === 'analyze_timezone_overlap') {
+                            toolResult = analyzeTimezoneOverlap(context);
+                        } else if (tc.toolName === 'suggest_member_changes') {
+                            toolResult = suggestChangesForMember(context, tc.args.memberName, tc.args.targetTimeUTC);
+                        } else if (tc.toolName === 'generate_message') {
+                            toolResult = generateMessageForMember(context, tc.args.memberName, tc.args.messageType, tc.args.specificSuggestion);
+                        }
+                        
+                        if (toolResult) {
+                            toolResults.push({
+                                tool: tc.toolName,
+                                result: toolResult
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        return res.status(200).json({ 
+            response: result.text,
+            toolResults: toolResults.length > 0 ? toolResults : undefined
+        });
+
     } catch (error) {
         console.error("Chat API error:", error);
-        console.error("Error details:", JSON.stringify(error, null, 2));
         
-        // Provide more specific error messages
         const errorMessage = error.message || String(error);
         
         if (errorMessage.includes('API key') || errorMessage.includes('API_KEY')) {
-            return res.status(500).json({ error: "Invalid API key. Check GOOGLE_GENERATIVE_AI_API_KEY in Vercel." });
+            return res.status(500).json({ error: "Invalid API key" });
         }
         if (errorMessage.includes('quota') || errorMessage.includes('429')) {
-            return res.status(429).json({ error: "API quota exceeded. Try again later." });
-        }
-        if (errorMessage.includes('model') || errorMessage.includes('not found')) {
-            return res.status(500).json({ error: "Model not available. Contact support." });
+            return res.status(429).json({ error: "API quota exceeded" });
         }
         
-        return res.status(500).json({
-            error: errorMessage || "Unknown error occurred"
-        });
+        return res.status(500).json({ error: errorMessage });
     }
 }

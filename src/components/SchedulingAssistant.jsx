@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 
+/**
+ * AI Scheduling Assistant - Now with actionable responses and copy buttons
+ */
 export function SchedulingAssistant({ 
     currentUser = null,
     currentGroup = null, 
@@ -8,9 +11,8 @@ export function SchedulingAssistant({
     humaneWindows = [],
     isOpen: controlledIsOpen,
     onOpenChange,
-    initialQuestion = null // Auto-send this question when provided
+    initialQuestion = null
 }) {
-    // Support both controlled and uncontrolled mode
     const [internalIsOpen, setInternalIsOpen] = useState(false);
     const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
     const setIsOpen = (value) => {
@@ -22,75 +24,66 @@ export function SchedulingAssistant({
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [autoSentQuestion, setAutoSentQuestion] = useState(null);
+    const [copiedIndex, setCopiedIndex] = useState(null);
     const messagesEndRef = useRef(null);
 
     // Build initial message based on context
     useEffect(() => {
-        let greeting = "Hi! I can help you with scheduling.";
+        let greeting = "Hi! I'm your scheduling assistant. I can analyze timezone overlaps, suggest what changes would help, and write messages to send to your group members.";
         
         if (currentGroup && groupMembers.length > 0) {
-            greeting = `Hi! I can see you're in the group "${currentGroup.name}" with ${groupMembers.length} members. `;
+            greeting = `Hi! I can see you're in "${currentGroup.name}" with ${groupMembers.length} members. `;
             if (suggestions.length > 0) {
                 const fullMatches = suggestions.filter(s => s.isFullMatch);
                 if (fullMatches.length > 0) {
-                    greeting += `Good news — there are ${fullMatches.length} times when everyone is available. `;
+                    greeting += `Great news — ${fullMatches.length} times work for everyone! `;
                 } else {
-                    greeting += `I see there are ${suggestions.length} partial matches, but no times when everyone is free. I can help you figure out how to find a slot that works. `;
+                    greeting += `No times work for everyone yet. Ask me to analyze why and I can suggest what each person could change. `;
                 }
             } else {
-                greeting += `No slots have been searched yet. Try clicking "Search" to find available times. `;
+                greeting += `Click "Search" first, then I can help analyze the results. `;
             }
-            greeting += "What would you like to know?";
-        } else if (currentUser) {
-            greeting = `Hi ${currentUser.name?.split(' ')[0] || 'there'}! I can help you with scheduling across timezones. What would you like to know?`;
         }
         
         setMessages([{ role: "assistant", content: greeting }]);
-        setAutoSentQuestion(null); // Reset when context changes
+        setAutoSentQuestion(null);
     }, [currentGroup?.id, groupMembers.length, suggestions.length]);
 
-    // Auto-send initial question when provided and assistant opens
+    // Auto-send initial question
     useEffect(() => {
         if (isOpen && initialQuestion && initialQuestion !== autoSentQuestion && messages.length === 1 && !isLoading) {
             setAutoSentQuestion(initialQuestion);
-            // Use a ref to avoid stale closure issues
-            const sendAutoQuestion = async () => {
-                const userMessage = { role: "user", content: initialQuestion };
-                setMessages(prev => [...prev, userMessage]);
-                setIsLoading(true);
-
-                try {
-                    const context = buildContext();
-                    const response = await fetch("/api/chat", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            messages: [messages[0], userMessage].map(m => ({
-                                role: m.role,
-                                content: m.content,
-                            })),
-                            context
-                        }),
-                    });
-
-                    const data = await response.json();
-                    if (data.error) throw new Error(data.error);
-                    
-                    setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
-                } catch (error) {
-                    console.error("Auto-send error:", error);
-                    setMessages(prev => [...prev, { 
-                        role: "assistant", 
-                        content: "Sorry, I couldn't connect. Please try typing your question below." 
-                    }]);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            
-            setTimeout(sendAutoQuestion, 100);
+            setTimeout(() => sendMessageWithText(initialQuestion), 100);
         }
     }, [isOpen, initialQuestion, autoSentQuestion, messages.length, isLoading]);
+
+    const buildContext = () => ({
+        user: currentUser ? {
+            name: currentUser.name,
+            email: currentUser.username,
+            provider: currentUser.provider,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            humaneWindows: humaneWindows
+        } : null,
+        group: currentGroup ? {
+            name: currentGroup.name,
+            memberCount: groupMembers.length
+        } : null,
+        members: groupMembers.map(m => ({
+            name: m.display_name || m.email?.split('@')[0],
+            email: m.email,
+            timezone: m.timezone,
+            windows: m.humane_windows
+        })),
+        suggestions: suggestions.slice(0, 10).map(s => ({
+            start: s.start,
+            end: s.end,
+            availableCount: s.availableMembers?.length || 0,
+            totalMembers: groupMembers.length,
+            isFullMatch: s.isFullMatch,
+            unavailable: s.unavailableMembers?.map(m => m.display_name || m.email?.split('@')[0]) || []
+        }))
+    });
 
     const sendMessageWithText = async (text) => {
         if (!text.trim() || isLoading) return;
@@ -118,48 +111,24 @@ export function SchedulingAssistant({
                 throw new Error(data.error);
             }
 
-            setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
+            // Create message with potential tool results
+            const assistantMessage = { 
+                role: "assistant", 
+                content: data.response,
+                toolResults: data.toolResults || []
+            };
+
+            setMessages(prev => [...prev, assistantMessage]);
         } catch (error) {
             console.error("Chat error:", error);
             setMessages(prev => [...prev, { 
                 role: "assistant", 
-                content: `Sorry, I'm having trouble connecting. Error: ${error.message}` 
+                content: `Sorry, I'm having trouble connecting. ${error.message}` 
             }]);
         } finally {
             setIsLoading(false);
         }
     };
-
-    const buildContext = () => ({
-        user: currentUser ? {
-            name: currentUser.name,
-            email: currentUser.username,
-            provider: currentUser.provider,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            humaneWindows: humaneWindows
-        } : null,
-        group: currentGroup ? {
-            name: currentGroup.name,
-            memberCount: groupMembers.length
-        } : null,
-        members: groupMembers.map(m => ({
-            name: m.display_name || m.email?.split('@')[0],
-            timezone: m.timezone,
-            windows: m.humane_windows
-        })),
-        suggestions: suggestions.slice(0, 10).map(s => ({
-            start: s.start,
-            end: s.end,
-            availableCount: s.availableMembers?.length || 0,
-            totalMembers: groupMembers.length,
-            isFullMatch: s.isFullMatch,
-            unavailable: s.unavailableMembers?.map(m => m.display_name || m.email?.split('@')[0]) || []
-        }))
-    });
-
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
 
     const sendMessage = async () => {
         if (!input.trim()) return;
@@ -175,35 +144,161 @@ export function SchedulingAssistant({
         }
     };
 
+    const copyToClipboard = async (text, index) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedIndex(index);
+            setTimeout(() => setCopiedIndex(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
+    // Extract copyable messages from content
+    const extractCopyableMessages = (content) => {
+        // Look for message blocks (text between --- markers or in quotes after "message:")
+        const messages = [];
+        
+        // Pattern 1: Text between --- markers
+        const dashPattern = /---\n([\s\S]*?)\n---/g;
+        let match;
+        while ((match = dashPattern.exec(content)) !== null) {
+            messages.push(match[1].trim());
+        }
+        
+        // Pattern 2: "Here's a message:" followed by quoted text
+        const quotePattern = /[Mm]essage[:\s]*\n*["']?([\s\S]*?)["']?(?=\n\n|$)/g;
+        while ((match = quotePattern.exec(content)) !== null) {
+            if (!messages.includes(match[1].trim())) {
+                messages.push(match[1].trim());
+            }
+        }
+        
+        return messages;
+    };
+
+    // Render a message with special formatting for tool results
+    const renderMessage = (msg, index) => {
+        const isUser = msg.role === "user";
+        const copyableMessages = !isUser ? extractCopyableMessages(msg.content) : [];
+        
+        // Check if there's a generate_message tool result
+        const messageToolResult = msg.toolResults?.find(t => t.tool === 'generate_message');
+        
+        return (
+            <div key={index} className={`assistant-message ${isUser ? "user" : "bot"}`}>
+                {/* Main content */}
+                <div className="message-content">
+                    {msg.content.split('\n').map((line, i) => (
+                        <p key={i}>{line || '\u00A0'}</p>
+                    ))}
+                </div>
+                
+                {/* Copyable message card from tool result */}
+                {messageToolResult && (
+                    <div className="copyable-message-card">
+                        <div className="copyable-message-header">
+                            Message for {messageToolResult.result.recipientName}
+                        </div>
+                        <div className="copyable-message-body">
+                            {messageToolResult.result.message}
+                        </div>
+                        <button 
+                            className={`copy-button ${copiedIndex === `tool-${index}` ? 'copied' : ''}`}
+                            onClick={() => copyToClipboard(messageToolResult.result.message, `tool-${index}`)}
+                        >
+                            {copiedIndex === `tool-${index}` ? 'Copied!' : 'Copy message'}
+                        </button>
+                    </div>
+                )}
+                
+                {/* Inline copyable messages found in content */}
+                {copyableMessages.length > 0 && !messageToolResult && copyableMessages.map((msgText, i) => (
+                    <div key={i} className="copyable-message-card">
+                        <div className="copyable-message-body">
+                            {msgText}
+                        </div>
+                        <button 
+                            className={`copy-button ${copiedIndex === `${index}-${i}` ? 'copied' : ''}`}
+                            onClick={() => copyToClipboard(msgText, `${index}-${i}`)}
+                        >
+                            {copiedIndex === `${index}-${i}` ? 'Copied!' : 'Copy message'}
+                        </button>
+                    </div>
+                ))}
+                
+                {/* Timezone analysis card */}
+                {msg.toolResults?.find(t => t.tool === 'analyze_timezone_overlap') && (
+                    <div className="analysis-card">
+                        {renderTimezoneAnalysis(msg.toolResults.find(t => t.tool === 'analyze_timezone_overlap').result)}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Render timezone analysis as a nice card
+    const renderTimezoneAnalysis = (analysis) => {
+        if (analysis.error) return <p className="error">{analysis.error}</p>;
+        
+        return (
+            <div className="timezone-analysis">
+                <div className="analysis-header">
+                    <span className="analysis-title">Timezone Analysis</span>
+                    <span className={`spread-badge ${analysis.goldenWindowExists ? 'good' : 'challenging'}`}>
+                        {analysis.timezoneSpread} spread
+                    </span>
+                </div>
+                
+                {analysis.bestHoursUTC?.slice(0, 2).map((hour, i) => (
+                    <div key={i} className="best-hour-card">
+                        <div className="best-hour-time">{hour.time}</div>
+                        <div className="member-times">
+                            {hour.memberTimes?.map((mt, j) => (
+                                <div key={j} className="member-time">{mt}</div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+                
+                {analysis.adjustmentsNeeded?.length > 0 && (
+                    <div className="adjustments-section">
+                        <div className="adjustments-title">Who would need to adjust:</div>
+                        {analysis.adjustmentsNeeded.map((adj, i) => (
+                            <div key={i} className="adjustment-item">
+                                <strong>{adj.member}</strong>: {adj.suggestion}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     // Context-aware quick questions
     const getQuickQuestions = () => {
-        if (currentGroup && suggestions.length === 0) {
-            return [
-                "How do I find available times?",
-                "How do I change my availability?",
-                "How do timezones work?"
-            ];
-        }
         if (currentGroup && suggestions.length > 0 && !suggestions.some(s => s.isFullMatch)) {
             return [
-                "Why is no one fully available?",
-                "What times would work?",
-                "How can I adjust my hours?"
+                "Analyze why we can't find a time",
+                "Who needs to adjust their hours?",
+                "Write a message to ask someone to change"
             ];
         }
         if (currentGroup && suggestions.some(s => s.isFullMatch)) {
             return [
                 "How do I send the invite?",
-                "What happens when I book?",
-                "Can I change the meeting length?"
+                "What's the best time slot?",
             ];
         }
         return [
-            "How do I create a group?",
-            "How do timezones work?",
-            "Is my calendar data safe?"
+            "How does timezone matching work?",
+            "How do I set my availability?",
         ];
     };
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
 
     return (
         <>
@@ -215,40 +310,31 @@ export function SchedulingAssistant({
                     aria-label="Chat with Assistant"
                 >
                     <span className="assistant-trigger-icon">?</span>
-                    <span className="assistant-trigger-text">Need help?</span>
+                    <span className="assistant-trigger-text">AI Help</span>
                 </button>
             )}
 
             {/* Chat Window */}
             {isOpen && (
                 <div className="assistant-window">
-                    {/* Header */}
                     <div className="assistant-header">
                         <div className="assistant-header-info">
-                            <span className="assistant-title">Scheduling Assistant</span>
+                            <span className="assistant-title">AI Scheduling Agent</span>
                             <span className="assistant-subtitle">
-                                {currentGroup ? `Helping with: ${currentGroup.name}` : 'Ask me anything'}
+                                {currentGroup ? currentGroup.name : 'Ask me anything'}
                             </span>
                         </div>
                         <button
                             onClick={() => setIsOpen(false)}
                             className="assistant-close"
-                            aria-label="Close chat"
+                            aria-label="Close"
                         >
                             ×
                         </button>
                     </div>
 
-                    {/* Messages */}
                     <div className="assistant-messages">
-                        {messages.map((msg, i) => (
-                            <div
-                                key={i}
-                                className={`assistant-message ${msg.role === "user" ? "user" : "bot"}`}
-                            >
-                                <p>{msg.content}</p>
-                            </div>
-                        ))}
+                        {messages.map((msg, i) => renderMessage(msg, i))}
 
                         {isLoading && (
                             <div className="assistant-message bot">
@@ -262,16 +348,13 @@ export function SchedulingAssistant({
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Quick Questions (show only at start) */}
+                    {/* Quick Questions */}
                     {messages.length === 1 && (
                         <div className="assistant-quick-questions">
                             {getQuickQuestions().map((q, i) => (
                                 <button
                                     key={i}
-                                    onClick={() => {
-                                        setInput(q);
-                                        setTimeout(() => sendMessage(), 0);
-                                    }}
+                                    onClick={() => sendMessageWithText(q)}
                                     className="quick-question-btn"
                                 >
                                     {q}
@@ -280,7 +363,6 @@ export function SchedulingAssistant({
                         </div>
                     )}
 
-                    {/* Input Area */}
                     <div className="assistant-input-area">
                         <input
                             type="text"
