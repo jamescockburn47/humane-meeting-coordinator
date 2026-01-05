@@ -624,7 +624,7 @@ export default async function handler(req, res) {
             const systemPrompt = buildSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-2.5-flash-preview-05-20', { apiKey }), // Gemini 2.5 Flash (latest stable)
+                model: google('gemini-3-flash-preview', { apiKey }), // Gemini 3 Flash
                 system: systemPrompt,
                 messages: conversationMessages,
                 tools,
