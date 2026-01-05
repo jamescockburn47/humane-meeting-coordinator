@@ -723,7 +723,7 @@ export default async function handler(req, res) {
             const systemPrompt = buildSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-3-flash-preview', { apiKey }), // Gemini 3 Flash
+                model: google('gemini-2.0-flash', { apiKey }), // Gemini 2.0 Flash with tools
                 system: systemPrompt,
                 messages: conversationMessages,
                 tools,
@@ -799,11 +799,11 @@ export default async function handler(req, res) {
             });
 
         } else {
-            // ATTENDEE: Simple chat with Gemini 1.5 Flash (cheaper, faster)
+            // ATTENDEE: Simple chat with Gemini 3 Flash (same model for consistency)
             const systemPrompt = buildAttendeeSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-1.5-flash', { apiKey }), // Cheaper model for attendees
+                model: google('gemini-2.0-flash', { apiKey }), // Gemini 2.0 Flash for attendees
                 system: systemPrompt,
                 messages: conversationMessages
                 // No tools for attendees - simpler experience
