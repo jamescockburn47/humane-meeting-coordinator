@@ -227,7 +227,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
         
         if (shouldSearch) {
             console.log(`Auto-searching: ${hasAutoSearched ? 'member count changed' : 'initial load'} (${prevMemberCount} → ${members.length})`);
-            onFindTimes(startDate, endDate, duration);
+            onFindTimes(group.id, startDate, endDate, duration);
             setHasAutoSearched(true);
         }
         
