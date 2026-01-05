@@ -1,6 +1,6 @@
 import { generateText, tool } from 'ai';
-import { google } from '@ai-sdk/google';
-import { anthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 
 /**
@@ -1194,12 +1194,17 @@ export default async function handler(req, res) {
         const anthropicKey = process.env.ANTHROPIC_API_KEY;
         const geminiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
         
+        console.log('API Keys present:', { 
+            anthropic: !!anthropicKey, 
+            gemini: !!geminiKey,
+            anthropicPrefix: anthropicKey?.substring(0, 10) + '...'
+        });
+        
         const useClaude = !!anthropicKey;
-        const apiKey = anthropicKey || geminiKey;
 
-        if (!apiKey) {
+        if (!anthropicKey && !geminiKey) {
             console.error("No API key found (need ANTHROPIC_API_KEY or GEMINI_API_KEY)");
-            return res.status(500).json({ error: "API key not configured" });
+            return res.status(500).json({ error: "API key not configured. Add ANTHROPIC_API_KEY to Vercel environment variables." });
         }
 
         const conversationMessages = messages.map(msg => ({
@@ -1207,22 +1212,22 @@ export default async function handler(req, res) {
             content: msg.content
         }));
 
+        // Create AI providers with explicit API keys
+        const anthropic = anthropicKey ? createAnthropic({ apiKey: anthropicKey }) : null;
+        const google = geminiKey ? createGoogleGenerativeAI({ apiKey: geminiKey }) : null;
+
         // Select model - Claude preferred, Gemini fallback
-        // Try multiple Claude model names in case naming convention changed
-        const claudeModels = [
-            'claude-3-5-haiku-20241022',  // Claude 3.5 Haiku (proven to work)
-            'claude-3-5-haiku-latest',     // Latest alias
-            'claude-3-haiku-20240307'      // Older stable version
-        ];
-        
         const getModel = () => {
-            if (useClaude) {
-                const modelName = claudeModels[0]; // Use first option
+            if (useClaude && anthropic) {
+                const modelName = 'claude-3-5-haiku-20241022'; // Proven stable
                 console.log(`Using Claude model: ${modelName}`);
                 return anthropic(modelName);
             }
-            console.log('Using Gemini fallback: gemini-2.0-flash-001');
-            return google('gemini-2.0-flash-001', { apiKey: geminiKey });
+            if (google) {
+                console.log('Using Gemini fallback: gemini-2.0-flash-001');
+                return google('gemini-2.0-flash-001');
+            }
+            throw new Error('No AI provider available');
         };
 
         if (isOrganiser) {
