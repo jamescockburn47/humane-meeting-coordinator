@@ -441,7 +441,7 @@ function App() {
     fetchMyGroups(activeAccount.username);
   };
 
-  const handleFindTimes = async (groupId, startStr, endStr) => {
+  const handleFindTimes = async (groupId, startStr, endStr, durationMinutes = 60) => {
     setLoading(true);
     try {
       const members = await getGroupMembers(groupId);
@@ -450,6 +450,7 @@ function App() {
       console.log("=== FIND TIMES DEBUG ===");
       console.log("Group ID:", groupId);
       console.log("Date range:", startStr, "to", endStr);
+      console.log("Duration:", durationMinutes, "minutes");
       console.log("Members found:", members.length);
       members.forEach(m => {
         console.log(`  - ${m.email}: timezone=${m.timezone}, windows=`, m.humane_windows);
@@ -462,7 +463,7 @@ function App() {
       const busySlots = await getBusySlotsForUsers(memberEmails, start, end);
       console.log("Busy slots fetched:", busySlots.length);
 
-      const slots = findCommonHumaneSlots(members, busySlots, startStr, endStr, 60);
+      const slots = findCommonHumaneSlots(members, busySlots, startStr, endStr, durationMinutes);
       console.log("Slots found:", slots.length);
       
       if (slots.length === 0) {

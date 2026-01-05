@@ -93,6 +93,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId }) {
 export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook, onDeleteGroup }) {
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]);
+    const [duration, setDuration] = useState(60); // Default 60 minutes
     const [bookingSlot, setBookingSlot] = useState(null);
     const [bookingProcessing, setBookingProcessing] = useState(false);
 
@@ -189,28 +190,45 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                 {/* --- Search Availability --- */}
                 <div className="card">
                     <h3 style={{ marginTop: 0 }}>Find Humane Times</h3>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'end', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1, minWidth: '130px' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>From</label>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                        <div style={{ minWidth: '120px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>From</label>
                             <input
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                             />
                         </div>
-                        <div style={{ flex: 1, minWidth: '130px' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>To</label>
+                        <div style={{ minWidth: '120px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>To</label>
                             <input
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
                             />
                         </div>
+                        <div style={{ minWidth: '100px' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Duration</label>
+                            <select 
+                                value={duration} 
+                                onChange={(e) => setDuration(Number(e.target.value))}
+                                className="duration-select"
+                            >
+                                <option value={15}>15 min</option>
+                                <option value={30}>30 min</option>
+                                <option value={45}>45 min</option>
+                                <option value={60}>1 hour</option>
+                                <option value={90}>1.5 hours</option>
+                                <option value={120}>2 hours</option>
+                                <option value={180}>3 hours</option>
+                                <option value={240}>4 hours</option>
+                            </select>
+                        </div>
                         <button
                             className="btn-primary"
-                            onClick={() => onFindTimes(group.id, startDate, endDate)}
+                            onClick={() => onFindTimes(group.id, startDate, endDate, duration)}
                             disabled={loading}
-                            style={{ minWidth: '120px' }}
+                            style={{ minWidth: '100px' }}
                         >
                             {loading ? 'Scanning...' : 'Search'}
                         </button>
