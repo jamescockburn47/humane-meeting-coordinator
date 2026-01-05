@@ -9,8 +9,15 @@ export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 /**
  * Upserts a user profile.
+ * @param {string} email - User email
+ * @param {string} name - Display name
+ * @param {string} timezone - User's timezone
+ * @param {string} startLocal - Legacy: humane start time
+ * @param {string} endLocal - Legacy: humane end time
+ * @param {Array} windows - Availability windows
+ * @param {boolean} nightOwl - Allow midnight-6am slots
  */
-export async function updateProfile(email, name, timezone, startLocal, endLocal, windows = []) {
+export async function updateProfile(email, name, timezone, startLocal, endLocal, windows = [], nightOwl = false) {
     const { data, error } = await supabase
         .from('profiles')
         .upsert({
@@ -20,6 +27,7 @@ export async function updateProfile(email, name, timezone, startLocal, endLocal,
             humane_start_local: startLocal,
             humane_end_local: endLocal,
             humane_windows: windows,
+            night_owl: nightOwl,
             last_synced_at: new Date().toISOString()
         }, { onConflict: 'email' })
         .select();

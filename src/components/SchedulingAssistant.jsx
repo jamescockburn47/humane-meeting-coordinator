@@ -5,9 +5,18 @@ export function SchedulingAssistant({
     currentGroup = null, 
     groupMembers = [],
     suggestions = [],
-    humaneWindows = []
+    humaneWindows = [],
+    isOpen: controlledIsOpen,
+    onOpenChange
 }) {
-    const [isOpen, setIsOpen] = useState(false);
+    // Support both controlled and uncontrolled mode
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
+    const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+    const setIsOpen = (value) => {
+        if (onOpenChange) onOpenChange(value);
+        else setInternalIsOpen(value);
+    };
+    
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);

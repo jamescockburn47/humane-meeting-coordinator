@@ -32,6 +32,7 @@ function App() {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myBusySlots, setMyBusySlots] = useState([]); // For calendar overlay
   const [joinInviteCode, setJoinInviteCode] = useState(null); // For URL-based joins
@@ -42,6 +43,7 @@ function App() {
   ]);
 
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [nightOwl, setNightOwl] = useState(false); // Allow midnight-6am slots
   const [syncStatus, setSyncStatus] = useState("Idle");
 
   const [loading, setLoading] = useState(false);
@@ -102,6 +104,7 @@ function App() {
             setHumaneWindows(profile.humane_windows);
           }
           if (profile.timezone) setTimezone(profile.timezone);
+          if (profile.night_owl !== undefined) setNightOwl(profile.night_owl);
         } else {
           // Only create profile if it doesn't exist (first time user)
           updateProfile(
@@ -184,6 +187,7 @@ function App() {
           setHumaneWindows(existingProfile.humane_windows);
         }
         if (existingProfile.timezone) setTimezone(existingProfile.timezone);
+        if (existingProfile.night_owl !== undefined) setNightOwl(existingProfile.night_owl);
       } else {
         // First time user - create profile with defaults
         await updateProfile(
@@ -415,7 +419,8 @@ function App() {
         timezone,
         humaneWindows[0]?.start || "09:00", // Fallback for legacy
         humaneWindows[0]?.end || "17:00",   // Fallback for legacy
-        humaneWindows // New JSONB
+        humaneWindows, // New JSONB
+        nightOwl // Allow midnight-6am slots
       );
 
       setSyncStatus("Synced!");
@@ -904,6 +909,28 @@ function App() {
                   >
                     + Add Time Window
                   </button>
+
+                  {/* Night Owl Preference */}
+                  <label 
+                    className="night-owl-toggle"
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem', 
+                      marginTop: '1rem',
+                      fontSize: '0.85rem',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={nightOwl}
+                      onChange={(e) => setNightOwl(e.target.checked)}
+                      style={{ width: '16px', height: '16px' }}
+                    />
+                    <span>Include overnight slots (midnight-6am)</span>
+                  </label>
                 </div>
 
                 {/* Calendar Conflicts Overlay */}
@@ -1005,6 +1032,7 @@ function App() {
               setView('dashboard');
             }}
             onMembersLoaded={setCurrentGroupMembers}
+            onOpenAssistant={() => setAssistantOpen(true)}
           />
         )}
 
@@ -1024,6 +1052,8 @@ function App() {
         groupMembers={currentGroupMembers}
         suggestions={suggestions}
         humaneWindows={humaneWindows}
+        isOpen={assistantOpen}
+        onOpenChange={setAssistantOpen}
       />
     </div>
   )

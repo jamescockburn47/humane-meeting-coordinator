@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookingModal } from './BookingModal';
+import { SmartSuggestions } from './SmartSuggestions';
 import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup } from '../services/supabase';
 
 // Invite Link Card Component - Focused on sharing links with optional date range
@@ -175,7 +176,7 @@ function SlotCard({ slot, onClick, members, showPartial = false }) {
     );
 }
 
-export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook, onDeleteGroup, onMembersLoaded }) {
+export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook, onDeleteGroup, onMembersLoaded, onOpenAssistant }) {
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]);
     const [duration, setDuration] = useState(60); // Default 60 minutes
@@ -376,6 +377,16 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     </div>
                 </div>
             </div>
+
+            {/* Smart Suggestions - Show when no full matches but partial matches exist */}
+            {suggestions.length > 0 && suggestions.filter(s => s.isFullMatch).length === 0 && (
+                <SmartSuggestions 
+                    suggestions={suggestions}
+                    members={members}
+                    currentUserEmail={currentUser?.username}
+                    onOpenAssistant={onOpenAssistant}
+                />
+            )}
 
             {/* Full Match Section */}
             {suggestions.filter(s => s.isFullMatch).length > 0 && (

@@ -7,6 +7,7 @@ import { addMinutes } from 'date-fns';
  * This function finds time slots that:
  * 1. Fall within members' availability windows (in their local timezone)
  * 2. Don't overlap with members' busy times
+ * 3. Respects "Night Protection" - no slots between midnight-6am unless user opts in
  * 
  * NEW: Also returns partial attendance info for groups > 2 people
  */
@@ -147,7 +148,7 @@ function deduplicateSlots(slots) {
  * 
  * @param {Date} startUtc - Slot start time (UTC)
  * @param {Date} endUtc - Slot end time (UTC)
- * @param {Object} member - Member with timezone and humane_windows
+ * @param {Object} member - Member with timezone, humane_windows, and night_owl preference
  * @returns {{ humane: boolean, reason: string }}
  */
 function isHumane(startUtc, endUtc, member) {
@@ -173,6 +174,18 @@ function isHumane(startUtc, endUtc, member) {
     // These should be rejected as they span two days
     if (endHour < startHour) {
         return { humane: false, reason: 'Slot crosses midnight' };
+    }
+
+    // NIGHT PROTECTION: Reject slots between midnight and 6am unless user has opted in
+    // This prevents suggesting 3am meetings even if someone's window technically allows it
+    const isNightTime = startHour < 6 || endHour < 6;
+    const isNightOwl = member.night_owl === true;
+    
+    if (isNightTime && !isNightOwl) {
+        return { 
+            humane: false, 
+            reason: `Night protection: ${startHour.toFixed(0)}:00 is between midnight-6am` 
+        };
     }
 
     // Check if member has defined windows
@@ -266,4 +279,118 @@ function isBusy(slotStart, slotEnd, email, allBusySlots) {
         }
     }
     return false;
+}
+
+/**
+ * Analyze scheduling results and generate smart suggestions
+ * This helps users understand WHY there are no full matches and WHAT to do about it
+ */
+export function analyzeSchedulingResults(suggestions, members) {
+    const analysis = {
+        hasFullMatches: false,
+        fullMatchCount: 0,
+        partialMatchCount: 0,
+        blockerAnalysis: [],
+        suggestions: [],
+        bestPartialSlot: null
+    };
+
+    if (!suggestions || suggestions.length === 0) {
+        analysis.suggestions.push({
+            type: 'no_results',
+            message: 'No times found. Try expanding the date range or ask members to add more availability windows.'
+        });
+        return analysis;
+    }
+
+    const fullMatches = suggestions.filter(s => s.isFullMatch);
+    const partialMatches = suggestions.filter(s => !s.isFullMatch);
+
+    analysis.hasFullMatches = fullMatches.length > 0;
+    analysis.fullMatchCount = fullMatches.length;
+    analysis.partialMatchCount = partialMatches.length;
+
+    if (fullMatches.length > 0) {
+        analysis.suggestions.push({
+            type: 'success',
+            message: `Found ${fullMatches.length} times when everyone is available. Pick one and send the invite!`
+        });
+        return analysis;
+    }
+
+    // No full matches - analyze who is blocking
+    if (partialMatches.length > 0) {
+        const blockerCount = {};
+        const blockerReasons = {};
+
+        for (const slot of partialMatches) {
+            for (const unavailable of slot.unavailableMembers || []) {
+                const name = unavailable.name || unavailable.email?.split('@')[0] || 'Unknown';
+                blockerCount[name] = (blockerCount[name] || 0) + 1;
+                
+                if (!blockerReasons[name]) {
+                    blockerReasons[name] = unavailable.reason || 'Outside their hours';
+                }
+            }
+        }
+
+        // Sort by who blocks the most
+        const sortedBlockers = Object.entries(blockerCount)
+            .map(([name, count]) => ({
+                name,
+                blockCount: count,
+                percentage: Math.round((count / partialMatches.length) * 100),
+                reason: blockerReasons[name]
+            }))
+            .sort((a, b) => b.blockCount - a.blockCount);
+
+        analysis.blockerAnalysis = sortedBlockers;
+
+        // Best partial slot (highest attendance)
+        const bestPartial = partialMatches.reduce((best, current) => 
+            (current.attendanceRatio > (best?.attendanceRatio || 0)) ? current : best
+        , null);
+        analysis.bestPartialSlot = bestPartial;
+
+        // Generate specific suggestions
+        if (sortedBlockers.length > 0) {
+            const topBlocker = sortedBlockers[0];
+            
+            if (topBlocker.percentage >= 80) {
+                analysis.suggestions.push({
+                    type: 'major_blocker',
+                    member: topBlocker.name,
+                    message: `${topBlocker.name} is unavailable for ${topBlocker.percentage}% of partial slots. They may need to expand their availability hours.`
+                });
+            } else if (sortedBlockers.length >= 2 && sortedBlockers[0].percentage >= 50 && sortedBlockers[1].percentage >= 50) {
+                analysis.suggestions.push({
+                    type: 'multiple_blockers',
+                    members: [sortedBlockers[0].name, sortedBlockers[1].name],
+                    message: `Both ${sortedBlockers[0].name} and ${sortedBlockers[1].name} have limited overlap. Consider finding a time that works for most and checking if others can join.`
+                });
+            }
+
+            // Check for timezone spread issue
+            const timezones = members.map(m => m.timezone).filter(Boolean);
+            const uniqueTZ = [...new Set(timezones)];
+            if (uniqueTZ.length >= 3) {
+                analysis.suggestions.push({
+                    type: 'timezone_spread',
+                    message: `Your group spans ${uniqueTZ.length} timezones. Evening calls (17:00-21:00) in the middle timezone often create the best overlap.`
+                });
+            }
+        }
+
+        // Suggest using partial attendance
+        if (bestPartial && bestPartial.availableMembers?.length >= 2) {
+            const available = bestPartial.availableMembers.length;
+            const total = members.length;
+            analysis.suggestions.push({
+                type: 'use_partial',
+                message: `The best partial slot has ${available}/${total} members available. You can still send the invite and let others join if they can.`
+            });
+        }
+    }
+
+    return analysis;
 }

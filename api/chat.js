@@ -110,14 +110,36 @@ STRICT RULES:
         }
     }
 
+    // Add member-specific suggestions based on their timezones
+    if (context?.members?.length > 1) {
+        prompt += `\n\n## Timezone Analysis for Smart Suggestions`;
+        
+        // Find timezone spread
+        const timezones = context.members.map(m => m.timezone).filter(Boolean);
+        const uniqueTimezones = [...new Set(timezones)];
+        
+        if (uniqueTimezones.length > 1) {
+            prompt += `\nGroup spans ${uniqueTimezones.length} timezones: ${uniqueTimezones.join(', ')}`;
+            prompt += `\n\nWhen suggesting times to the user:`;
+            prompt += `\n- For groups spanning Asia + Europe: try 08:00-10:00 Europe time (afternoon in Asia)`;
+            prompt += `\n- For groups spanning Europe + Americas: try 14:00-17:00 Europe time (morning in Americas)`;
+            prompt += `\n- For groups spanning Asia + Americas: this is hardest - try early morning Americas or late evening Asia`;
+            prompt += `\n- Always suggest they might try adding an extra availability window at the edge of their day`;
+        }
+    }
+
     prompt += `\n\n## Changing Availability
 To change availability:
-1. Click on your profile/settings
-2. Add or edit "Humane Windows" (the hours you're willing to meet)
+1. Go to Dashboard and find "My Humane Hours"
+2. Add or edit availability windows (the hours you're willing to meet)
 3. You can set different times for weekdays vs weekends
-4. Save changes and search again
+4. Check "Include overnight slots" if you're willing to meet between midnight and 6am
+5. Click "Save & Sync" and search again
 
-If someone else needs to change their availability, they should revisit their invite link or log in and update their settings.`;
+If someone else needs to change their availability, they should revisit their invite link or log in and update their settings.
+
+## IMPORTANT: Night Protection
+By default, we filter out slots between midnight and 6am in the user's local time. If they need those hours, they must check the "Include overnight slots" option in their settings.`;
 
     return prompt;
 }

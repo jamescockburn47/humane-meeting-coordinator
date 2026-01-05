@@ -3555,3 +3555,118 @@ label {
     border-radius: 0;
   }
 }
+
+/* === SMART SUGGESTIONS CARD === */
+
+.smart-suggestions-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 1px solid var(--primary);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.suggestions-header {
+  margin-bottom: 1rem;
+}
+
+.suggestions-title {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.suggestions-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.blocker-insight {
+  background: var(--bg-sidebar);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  border-left: 3px solid var(--text-muted);
+}
+
+.blocker-insight.is-you {
+  border-left-color: var(--primary);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.blocker-message {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.blocker-action {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.timezone-insight,
+.partial-suggestion {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border);
+}
+
+.timezone-insight p,
+.partial-suggestion p {
+  margin: 0;
+}
+
+.suggestions-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.btn-assistant-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--primary);
+  color: var(--bg-app);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-assistant-prompt:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-assistant-prompt .assistant-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--bg-app);
+  color: var(--primary);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.assistant-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
