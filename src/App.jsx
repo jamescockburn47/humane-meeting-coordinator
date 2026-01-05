@@ -232,7 +232,7 @@ function App() {
       }
       fetchMyGroups(googleUser.username);
     },
-    scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
+    scope: 'https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.owned'
   });
 
   // Guest login (no calendar integration)

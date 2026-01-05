@@ -119,7 +119,7 @@ export async function createGoogleEvent(accessToken, subject, description, start
         console.error("This usually means:");
         console.error("  1. Your Google OAuth token expired - try logging out and back in");
         console.error("  2. Calendar API is not enabled in Google Cloud Console");
-        console.error("  3. Missing calendar.events scope");
+        console.error("  3. Missing calendar.events.owned scope");
         throw new Error("Failed to create Google Event: " + errorText);
     }
 
