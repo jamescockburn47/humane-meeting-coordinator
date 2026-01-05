@@ -51,24 +51,54 @@ export function SchedulingAssistant({
 
     // Auto-send initial question when provided and assistant opens
     useEffect(() => {
-        if (isOpen && initialQuestion && initialQuestion !== autoSentQuestion && messages.length === 1) {
+        if (isOpen && initialQuestion && initialQuestion !== autoSentQuestion && messages.length === 1 && !isLoading) {
             setAutoSentQuestion(initialQuestion);
-            // Delay slightly to ensure the UI shows the question being typed
-            setTimeout(() => {
-                sendMessageWithText(initialQuestion);
-            }, 300);
+            // Use a ref to avoid stale closure issues
+            const sendAutoQuestion = async () => {
+                const userMessage = { role: "user", content: initialQuestion };
+                setMessages(prev => [...prev, userMessage]);
+                setIsLoading(true);
+
+                try {
+                    const context = buildContext();
+                    const response = await fetch("/api/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            messages: [messages[0], userMessage].map(m => ({
+                                role: m.role,
+                                content: m.content,
+                            })),
+                            context
+                        }),
+                    });
+
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error);
+                    
+                    setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
+                } catch (error) {
+                    console.error("Auto-send error:", error);
+                    setMessages(prev => [...prev, { 
+                        role: "assistant", 
+                        content: "Sorry, I couldn't connect. Please try typing your question below." 
+                    }]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            setTimeout(sendAutoQuestion, 100);
         }
-    }, [isOpen, initialQuestion, autoSentQuestion, messages.length]);
+    }, [isOpen, initialQuestion, autoSentQuestion, messages.length, isLoading]);
 
     const sendMessageWithText = async (text) => {
-        if (!text.trim()) return;
+        if (!text.trim() || isLoading) return;
 
-        const userMessage = {
-            role: "user",
-            content: text,
-        };
+        const userMessage = { role: "user", content: text };
+        const currentMessages = [...messages, userMessage];
 
-        setMessages((prev) => [...prev, userMessage]);
+        setMessages(currentMessages);
         setIsLoading(true);
 
         try {
@@ -77,10 +107,7 @@ export function SchedulingAssistant({
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    messages: [...messages, userMessage].map((m) => ({
-                        role: m.role,
-                        content: m.content,
-                    })),
+                    messages: currentMessages.map(m => ({ role: m.role, content: m.content })),
                     context
                 }),
             });
@@ -91,16 +118,13 @@ export function SchedulingAssistant({
                 throw new Error(data.error);
             }
 
-            setMessages((prev) => [
-                ...prev,
-                { role: "assistant", content: data.response },
-            ]);
+            setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
         } catch (error) {
             console.error("Chat error:", error);
-            setMessages((prev) => [
-                ...prev,
-                { role: "assistant", content: `Sorry, I'm having trouble connecting right now. Please try again.` },
-            ]);
+            setMessages(prev => [...prev, { 
+                role: "assistant", 
+                content: `Sorry, I'm having trouble connecting. Error: ${error.message}` 
+            }]);
         } finally {
             setIsLoading(false);
         }
