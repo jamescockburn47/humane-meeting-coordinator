@@ -72,10 +72,11 @@ STRICT RULES:
             prompt += `\n\nNO FULL MATCHES - no time works for everyone`;
         }
 
+        // Analyze who is blocking (calculate once, use in multiple places)
+        let sortedBlockers = [];
         if (partialMatches.length > 0) {
             prompt += `\n\nPARTIAL MATCHES: ${partialMatches.length} times where some people are available`;
             
-            // Analyze who is blocking
             const blockerCount = {};
             partialMatches.forEach(s => {
                 (s.unavailable || []).forEach(name => {
@@ -83,7 +84,7 @@ STRICT RULES:
                 });
             });
             
-            const sortedBlockers = Object.entries(blockerCount).sort((a, b) => b[1] - a[1]);
+            sortedBlockers = Object.entries(blockerCount).sort((a, b) => b[1] - a[1]);
             if (sortedBlockers.length > 0) {
                 prompt += `\n\nWho is unavailable most often:`;
                 sortedBlockers.forEach(([name, count]) => {
@@ -99,7 +100,7 @@ STRICT RULES:
             prompt += `\n- Explain they can click on a time slot to see the booking form`;
         } else if (partialMatches.length > 0) {
             prompt += `\n- Explain that no time works for everyone`;
-            if (sortedBlockers?.length > 0) {
+            if (sortedBlockers.length > 0) {
                 const topBlocker = sortedBlockers[0];
                 prompt += `\n- Suggest asking ${topBlocker[0]} if they can adjust their availability`;
                 prompt += `\n- Or suggest the organiser expands the date range`;
