@@ -33,6 +33,7 @@ function App() {
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantQuestion, setAssistantQuestion] = useState(null); // Auto-send question
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myBusySlots, setMyBusySlots] = useState([]); // For calendar overlay
   const [joinInviteCode, setJoinInviteCode] = useState(null); // For URL-based joins
@@ -1055,7 +1056,10 @@ function App() {
               setView('dashboard');
             }}
             onMembersLoaded={setCurrentGroupMembers}
-            onOpenAssistant={() => setAssistantOpen(true)}
+            onOpenAssistant={(question) => {
+              setAssistantQuestion(question || "Why can't we find a time that works for everyone?");
+              setAssistantOpen(true);
+            }}
           />
         )}
 
@@ -1076,7 +1080,11 @@ function App() {
         suggestions={suggestions}
         humaneWindows={humaneWindows}
         isOpen={assistantOpen}
-        onOpenChange={setAssistantOpen}
+        onOpenChange={(open) => {
+          setAssistantOpen(open);
+          if (!open) setAssistantQuestion(null); // Clear question when closing
+        }}
+        initialQuestion={assistantQuestion}
       />
     </div>
   )

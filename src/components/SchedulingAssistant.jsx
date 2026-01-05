@@ -7,7 +7,8 @@ export function SchedulingAssistant({
     suggestions = [],
     humaneWindows = [],
     isOpen: controlledIsOpen,
-    onOpenChange
+    onOpenChange,
+    initialQuestion = null // Auto-send this question when provided
 }) {
     // Support both controlled and uncontrolled mode
     const [internalIsOpen, setInternalIsOpen] = useState(false);
@@ -20,6 +21,7 @@ export function SchedulingAssistant({
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [autoSentQuestion, setAutoSentQuestion] = useState(null);
     const messagesEndRef = useRef(null);
 
     // Build initial message based on context
@@ -44,53 +46,33 @@ export function SchedulingAssistant({
         }
         
         setMessages([{ role: "assistant", content: greeting }]);
+        setAutoSentQuestion(null); // Reset when context changes
     }, [currentGroup?.id, groupMembers.length, suggestions.length]);
 
+    // Auto-send initial question when provided and assistant opens
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+        if (isOpen && initialQuestion && initialQuestion !== autoSentQuestion && messages.length === 1) {
+            setAutoSentQuestion(initialQuestion);
+            // Delay slightly to ensure the UI shows the question being typed
+            setTimeout(() => {
+                sendMessageWithText(initialQuestion);
+            }, 300);
+        }
+    }, [isOpen, initialQuestion, autoSentQuestion, messages.length]);
 
-    const sendMessage = async () => {
-        if (!input.trim()) return;
+    const sendMessageWithText = async (text) => {
+        if (!text.trim()) return;
 
         const userMessage = {
             role: "user",
-            content: input,
+            content: text,
         };
 
         setMessages((prev) => [...prev, userMessage]);
-        setInput("");
         setIsLoading(true);
 
         try {
-            // Build context object to send to API
-            const context = {
-                user: currentUser ? {
-                    name: currentUser.name,
-                    email: currentUser.username,
-                    provider: currentUser.provider,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    humaneWindows: humaneWindows
-                } : null,
-                group: currentGroup ? {
-                    name: currentGroup.name,
-                    memberCount: groupMembers.length
-                } : null,
-                members: groupMembers.map(m => ({
-                    name: m.display_name || m.email?.split('@')[0],
-                    timezone: m.timezone,
-                    windows: m.humane_windows
-                })),
-                suggestions: suggestions.slice(0, 10).map(s => ({
-                    start: s.start,
-                    end: s.end,
-                    availableCount: s.availableMembers?.length || 0,
-                    totalMembers: groupMembers.length,
-                    isFullMatch: s.isFullMatch,
-                    unavailable: s.unavailableMembers?.map(m => m.display_name || m.email?.split('@')[0]) || []
-                }))
-            };
-
+            const context = buildContext();
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -111,23 +93,55 @@ export function SchedulingAssistant({
 
             setMessages((prev) => [
                 ...prev,
-                {
-                    role: "assistant",
-                    content: data.response,
-                },
+                { role: "assistant", content: data.response },
             ]);
         } catch (error) {
             console.error("Chat error:", error);
             setMessages((prev) => [
                 ...prev,
-                {
-                    role: "assistant",
-                    content: `Sorry, I'm having trouble connecting right now. Please try again in a moment.`,
-                },
+                { role: "assistant", content: `Sorry, I'm having trouble connecting right now. Please try again.` },
             ]);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const buildContext = () => ({
+        user: currentUser ? {
+            name: currentUser.name,
+            email: currentUser.username,
+            provider: currentUser.provider,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            humaneWindows: humaneWindows
+        } : null,
+        group: currentGroup ? {
+            name: currentGroup.name,
+            memberCount: groupMembers.length
+        } : null,
+        members: groupMembers.map(m => ({
+            name: m.display_name || m.email?.split('@')[0],
+            timezone: m.timezone,
+            windows: m.humane_windows
+        })),
+        suggestions: suggestions.slice(0, 10).map(s => ({
+            start: s.start,
+            end: s.end,
+            availableCount: s.availableMembers?.length || 0,
+            totalMembers: groupMembers.length,
+            isFullMatch: s.isFullMatch,
+            unavailable: s.unavailableMembers?.map(m => m.display_name || m.email?.split('@')[0]) || []
+        }))
+    });
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const sendMessage = async () => {
+        if (!input.trim()) return;
+        const text = input;
+        setInput("");
+        await sendMessageWithText(text);
     };
 
     const handleKeyPress = (e) => {

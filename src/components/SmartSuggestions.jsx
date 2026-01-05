@@ -101,14 +101,16 @@ export function SmartSuggestions({
             <div className="suggestions-footer">
                 <button 
                     className="btn-assistant-prompt"
-                    onClick={onOpenAssistant}
+                    onClick={() => {
+                        // Pass a contextual question based on the analysis
+                        const question = blockerInfo?.isMe 
+                            ? "What times should I add to my availability to find a match?"
+                            : `How can we find a time that works for everyone, including ${blockerInfo?.name || 'all members'}?`;
+                        onOpenAssistant(question);
+                    }}
                 >
-                    <span className="assistant-icon">?</span>
-                    <span>Get personalised suggestions</span>
+                    <span>Ask AI for help</span>
                 </button>
-                <p className="assistant-hint">
-                    The assistant can analyze your specific situation and suggest exact times that would work.
-                </p>
             </div>
         </div>
     );
