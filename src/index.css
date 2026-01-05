@@ -1834,6 +1834,29 @@ label {
   font-family: var(--font-sans);
 }
 
+.calendar-status-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.btn-test-calendar {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-test-calendar:hover {
+  background: var(--primary);
+  color: var(--bg);
+  border-color: var(--primary);
+}
+
 .connect-calendar-section {
   display: flex;
   flex-direction: column;

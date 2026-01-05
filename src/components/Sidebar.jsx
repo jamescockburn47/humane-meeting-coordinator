@@ -14,7 +14,8 @@ export function Sidebar({
     onConnectCalendar,
     isOpen,
     onShowPrivacy,
-    onShowAdmin
+    onShowAdmin,
+    onTestCalendar
 }) {
     const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'GU';
 
@@ -88,15 +89,26 @@ export function Sidebar({
                                     </div>
                                 </div>
                             ) : calendarConnected ? (
-                                <div
-                                    className="sync-status"
-                                    style={{ 
-                                        color: syncStatus === 'Synced!' ? 'var(--primary)' : 'var(--text-muted)', 
-                                        cursor: 'pointer'
-                                    }}
-                                    onClick={onSync}
-                                >
-                                    {syncStatus === 'Idle' ? '✓ Calendar synced' : syncStatus}
+                                <div className="calendar-status-section">
+                                    <div
+                                        className="sync-status"
+                                        style={{ 
+                                            color: syncStatus === 'Synced!' ? 'var(--primary)' : 'var(--text-muted)', 
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={onSync}
+                                    >
+                                        {syncStatus === 'Idle' ? '✓ Calendar synced' : syncStatus}
+                                    </div>
+                                    {onTestCalendar && (
+                                        <button 
+                                            onClick={onTestCalendar}
+                                            className="btn-test-calendar"
+                                            title="Create a test event to verify calendar access"
+                                        >
+                                            🧪 Test
+                                        </button>
+                                    )}
                                 </div>
                             ) : null}
                         </div>

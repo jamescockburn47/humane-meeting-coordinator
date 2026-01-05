@@ -408,6 +408,92 @@ function App() {
     }
   };
 
+  // Test calendar connection by creating a test event
+  const handleTestCalendar = async () => {
+    if (!activeAccount || !calendarConnected) {
+      alert("Please connect your calendar first.");
+      return;
+    }
+
+    const confirmTest = confirm(
+      "This will create a TEST event on your calendar in 5 minutes (and delete it after).\n\n" +
+      "This verifies that Humane Calendar can:\n" +
+      "✓ Create events on YOUR calendar\n" +
+      "✓ Send invites on YOUR behalf\n" +
+      "✓ Generate video meeting links\n\n" +
+      "Continue?"
+    );
+
+    if (!confirmTest) return;
+
+    try {
+      const now = new Date();
+      const testStart = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
+      const testEnd = new Date(testStart.getTime() + 15 * 60 * 1000); // 15 minutes later
+
+      if (activeAccount.provider === 'google') {
+        const result = await createGoogleEvent(
+          googleAccessToken,
+          "🧪 Humane Calendar Test Event",
+          "This is a test event to verify calendar integration.\n\nYou can delete this event.",
+          testStart.toISOString(),
+          testEnd.toISOString(),
+          [activeAccount.username], // Only invite yourself
+          activeAccount.username
+        );
+
+        alert(
+          "✅ SUCCESS! Test event created.\n\n" +
+          "Check your Google Calendar - you should see:\n" +
+          "• Event: '🧪 Humane Calendar Test Event'\n" +
+          "• Time: Starting in 5 minutes\n" +
+          "• Google Meet link included\n\n" +
+          "Organizer: " + (result.organizer?.email || activeAccount.username) + "\n\n" +
+          "You can delete this test event from your calendar."
+        );
+      } else if (activeAccount.provider === 'microsoft') {
+        const tokenResponse = await instance.acquireTokenSilent({ 
+          ...loginRequest, 
+          account: accounts[0] 
+        });
+
+        const result = await createMeeting(
+          tokenResponse.accessToken,
+          "🧪 Humane Calendar Test Event",
+          "This is a test event to verify calendar integration. You can delete this event.",
+          testStart.toISOString(),
+          testEnd.toISOString(),
+          [activeAccount.username],
+          activeAccount.username,
+          false
+        );
+
+        alert(
+          "✅ SUCCESS! Test event created.\n\n" +
+          "Check your Outlook Calendar - you should see:\n" +
+          "• Event: '🧪 Humane Calendar Test Event'\n" +
+          "• Time: Starting in 5 minutes\n" +
+          "• Teams link (if available)\n\n" +
+          "You can delete this test event from your calendar."
+        );
+      }
+
+      console.log("Calendar test completed successfully!");
+
+    } catch (err) {
+      console.error("Calendar test failed:", err);
+      alert(
+        "❌ FAILED to create test event.\n\n" +
+        "Error: " + err.message + "\n\n" +
+        "Common causes:\n" +
+        "1. OAuth token expired - try logging out and back in\n" +
+        "2. Calendar API not enabled in Google Cloud Console\n" +
+        "3. Missing permissions\n\n" +
+        "Check browser console (F12) for details."
+      );
+    }
+  };
+
   const checkOrganiserAccess = () => {
     const isOrganiser = localStorage.getItem('isOrganiser');
     if (isOrganiser === 'true') return true;
@@ -623,6 +709,7 @@ function App() {
         isOpen={sidebarOpen}
         onShowPrivacy={() => setShowPrivacyPolicy(true)}
         onShowAdmin={() => setShowAdminDashboard(true)}
+        onTestCalendar={handleTestCalendar}
       />
 
       {/* Guest Join Modal */}
