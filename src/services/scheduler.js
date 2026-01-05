@@ -5,7 +5,7 @@ import { addMinutes } from 'date-fns';
  * The Core Algorithm: Find intersection of "Humane Windows" minus "Busy Slots".
  * 
  * This function finds time slots that:
- * 1. Fall within EVERY member's availability windows
+ * 1. Fall within EVERY member's availability windows (in their local timezone)
  * 2. Don't overlap with any member's busy times
  */
 export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEndStr, durationMinutes) {
@@ -19,17 +19,20 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
         console.log(`Member ${i + 1}: ${m.email}`);
         console.log(`  Timezone: ${m.timezone || 'NOT SET (using UTC)'}`);
         console.log(`  Windows:`, m.humane_windows);
-        console.log(`  Legacy start/end:`, m.humane_start_local, m.humane_end_local);
     });
 
     console.log("Busy slots:", busySlots.length);
 
-    // Define the Global Search Window
-    const startScan = new Date(rangeStartStr);
-    startScan.setHours(0, 0, 0, 0);
+    // Parse dates - ensure we work in UTC to avoid timezone issues
+    // rangeStartStr format: '2025-01-06'
+    const [startYear, startMonth, startDay] = rangeStartStr.split('-').map(Number);
+    const [endYear, endMonth, endDay] = rangeEndStr.split('-').map(Number);
+    
+    // Create UTC dates for scanning
+    const startScan = new Date(Date.UTC(startYear, startMonth - 1, startDay, 0, 0, 0));
+    const endScan = new Date(Date.UTC(endYear, endMonth - 1, endDay, 23, 59, 0));
 
-    const endScan = new Date(rangeEndStr);
-    endScan.setHours(23, 59, 0, 0);
+    console.log("Scan range (UTC):", startScan.toISOString(), "to", endScan.toISOString());
 
     const candidates = [];
     const step = 30; // Check every 30 minutes
@@ -44,13 +47,11 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
 
         // Check 1: Is this slot "Humane" for everyone?
         let allHumane = true;
-        let rejectReason = null;
 
         for (const member of members) {
             const result = isHumane(currentTime, slotEnd, member);
             if (!result.humane) {
                 allHumane = false;
-                rejectReason = `${member.email}: ${result.reason}`;
                 break;
             }
         }
@@ -91,85 +92,92 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
     console.log(`Rejected (not humane): ${rejectedByHumane}`);
     console.log(`Rejected (someone busy): ${rejectedByBusy}`);
     console.log(`Valid candidates: ${candidates.length}`);
-    
-    if (candidates.length > 0) {
-        console.log("First 5 candidates:");
-        candidates.slice(0, 5).forEach(c => {
-            console.log(`  ${new Date(c.start).toLocaleString()} - ${new Date(c.end).toLocaleString()}`);
-        });
-    }
 
     return candidates;
 }
 
 /**
  * Check if a time slot falls within a member's availability windows.
- * Returns { humane: boolean, reason: string }
+ * 
+ * @param {Date} startUtc - Slot start time (UTC)
+ * @param {Date} endUtc - Slot end time (UTC)
+ * @param {Object} member - Member with timezone and humane_windows
+ * @returns {{ humane: boolean, reason: string }}
  */
 function isHumane(startUtc, endUtc, member) {
-    // Convert UTC slot to User's Local Time
     const zone = member.timezone || 'UTC';
     
+    // Convert UTC times to member's local timezone
     let localStart, localEnd;
     try {
         localStart = toZonedTime(startUtc, zone);
         localEnd = toZonedTime(endUtc, zone);
     } catch (e) {
-        console.error(`Invalid timezone for ${member.email}: ${zone}`);
-        localStart = startUtc;
-        localEnd = endUtc;
+        console.error(`Invalid timezone for ${member.email}: ${zone}, using UTC`);
+        localStart = new Date(startUtc);
+        localEnd = new Date(endUtc);
     }
 
+    // Extract local time components
     const startHour = localStart.getHours() + (localStart.getMinutes() / 60);
     const endHour = localEnd.getHours() + (localEnd.getMinutes() / 60);
     const day = localStart.getDay(); // 0=Sun, 6=Sat
+    
+    // Handle slots that cross midnight (endHour would be less than startHour)
+    // These should be rejected as they span two days
+    if (endHour < startHour) {
+        return { humane: false, reason: 'Slot crosses midnight' };
+    }
 
-    // Check Multi-Window Logic
+    // Check if member has defined windows
     const windows = member.humane_windows;
     
     if (windows && Array.isArray(windows) && windows.length > 0) {
         for (const win of windows) {
+            // Check if this day type matches
+            if (!checkDayType(win.type, day)) {
+                continue;
+            }
+
             // Parse window times
             const [hS, mS] = (win.start || "09:00").split(':').map(Number);
-            const wStart = hS + (mS / 60);
+            const windowStart = hS + (mS / 60);
             const [hE, mE] = (win.end || "17:00").split(':').map(Number);
-            const wEnd = hE + (mE / 60);
+            const windowEnd = hE + (mE / 60);
 
-            // Check day type
-            const isWeekend = (day === 0 || day === 6);
-            const dayMatches = checkDayType(win.type, day);
-            
-            if (!dayMatches) continue;
-
-            // Check if slot fits within this window
-            if (startHour >= wStart && endHour <= wEnd) {
-                return { humane: true, reason: `Fits in window ${win.start}-${win.end}` };
+            // Check if the ENTIRE slot fits within this window
+            // Both start AND end must be within the window
+            if (startHour >= windowStart && endHour <= windowEnd) {
+                return { humane: true, reason: `Fits ${win.start}-${win.end}` };
             }
         }
         
+        // Slot didn't fit any window
         return { 
             humane: false, 
-            reason: `${startHour.toFixed(1)}-${endHour.toFixed(1)} outside windows on day ${day}` 
+            reason: `${startHour.toFixed(1)}-${endHour.toFixed(1)} outside windows` 
         };
     }
 
-    // Fallback to Legacy Single Window
-    if (day === 0 || day === 6) {
-        return { humane: false, reason: `Weekend (day ${day})` };
+    // Fallback: Use legacy single window (humane_start_local / humane_end_local)
+    // Default to 9-17 weekday if nothing is set
+    const isWeekend = (day === 0 || day === 6);
+    if (isWeekend) {
+        return { humane: false, reason: 'Weekend (no window set)' };
     }
 
-    const [hS, mS] = (member.humane_start_local || "09:00").split(':').map(Number);
-    const prefStart = hS + (mS / 60);
-    const [hE, mE] = (member.humane_end_local || "17:00").split(':').map(Number);
-    const prefEnd = hE + (mE / 60);
+    const [legacyHS, legacyMS] = (member.humane_start_local || "09:00").split(':').map(Number);
+    const legacyStart = legacyHS + (legacyMS / 60);
+    const [legacyHE, legacyME] = (member.humane_end_local || "17:00").split(':').map(Number);
+    const legacyEnd = legacyHE + (legacyME / 60);
 
-    if (startHour >= prefStart && endHour <= prefEnd) {
+    if (startHour >= legacyStart && endHour <= legacyEnd) {
         return { humane: true, reason: 'Fits legacy window' };
     }
 
     return { 
         humane: false, 
-        reason: `${startHour.toFixed(1)}-${endHour.toFixed(1)} outside ${prefStart}-${prefEnd}` 
+        reason: `${startHour.toFixed(1)}-${endHour.toFixed(1)} outside ${legacyStart}-${legacyEnd}` 
     };
 }
 
@@ -206,7 +214,7 @@ function isBusy(slotStart, slotEnd, email, allBusySlots) {
         const busyStart = new Date(busy.start_time);
         const busyEnd = new Date(busy.end_time);
 
-        // Check for overlap: slot overlaps if it starts before busy ends AND ends after busy starts
+        // Check for overlap
         if (slotStart < busyEnd && slotEnd > busyStart) {
             return true;
         }
