@@ -323,7 +323,9 @@ export function JoinGroupPage({
                         </div>
 
                         <div className="form-group">
-                            <label>Your Availability</label>
+                            <label>When are you available?</label>
+                            <p className="form-help">Add all the time windows when you could take a meeting. The more options you add, the easier it is to find a match.</p>
+                            
                             {windows.map((win, idx) => (
                                 <div key={idx} className="window-row-compact">
                                     <select 
@@ -357,8 +359,26 @@ export function JoinGroupPage({
                                             setWindows(newWins);
                                         }}
                                     />
+                                    {windows.length > 1 && (
+                                        <button 
+                                            type="button"
+                                            className="btn-remove-window"
+                                            onClick={() => setWindows(windows.filter((_, i) => i !== idx))}
+                                            title="Remove this time slot"
+                                        >
+                                            ×
+                                        </button>
+                                    )}
                                 </div>
                             ))}
+                            
+                            <button 
+                                type="button"
+                                className="btn-add-window"
+                                onClick={() => setWindows([...windows, { start: "09:00", end: "17:00", type: "weekday" }])}
+                            >
+                                + Add another time window
+                            </button>
                         </div>
 
                         <div className="form-actions">
@@ -424,7 +444,9 @@ export function JoinGroupPage({
                         </div>
 
                         <div className="form-group">
-                            <label>Your Availability</label>
+                            <label>When are you available?</label>
+                            <p className="form-help">Add all the time windows when you could take a meeting. The more options you add, the easier it is to find a match.</p>
+                            
                             {windows.map((win, idx) => (
                                 <div key={idx} className="window-row-compact">
                                     <select 
@@ -458,8 +480,26 @@ export function JoinGroupPage({
                                             setWindows(newWins);
                                         }}
                                     />
+                                    {windows.length > 1 && (
+                                        <button 
+                                            type="button"
+                                            className="btn-remove-window"
+                                            onClick={() => setWindows(windows.filter((_, i) => i !== idx))}
+                                            title="Remove this time slot"
+                                        >
+                                            ×
+                                        </button>
+                                    )}
                                 </div>
                             ))}
+                            
+                            <button 
+                                type="button"
+                                className="btn-add-window"
+                                onClick={() => setWindows([...windows, { start: "09:00", end: "17:00", type: "weekday" }])}
+                            >
+                                + Add another time window
+                            </button>
                         </div>
 
                         <div className="form-actions">

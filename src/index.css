@@ -1346,6 +1346,53 @@ label {
   font-size: 0.85rem;
 }
 
+.btn-remove-window {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-remove-window:hover {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+.btn-add-window {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-add-window:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-dim);
+}
+
+.form-help {
+  margin: 0 0 1rem 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .form-actions {
   display: flex;
   gap: 1rem;
