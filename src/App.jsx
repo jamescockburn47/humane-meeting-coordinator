@@ -13,6 +13,7 @@ import { GuestJoinModal } from './components/GuestJoinModal';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { AdminDashboard } from './components/AdminDashboard';
 import { JoinGroupPage } from './components/JoinGroupPage';
+import { HowItWorks } from './components/HowItWorks';
 
 import './index.css';
 
@@ -44,7 +45,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
 
-  // Check for special URLs on load (/join/:code, /privacy)
+  // Check for special URLs on load (/join/:code, /privacy, /how-it-works)
   useEffect(() => {
     const path = window.location.pathname;
     
@@ -58,6 +59,12 @@ function App() {
     // Check for privacy policy page
     if (path === '/privacy' || path === '/privacy/') {
       setView('privacy');
+      return;
+    }
+    
+    // Check for how it works page
+    if (path === '/how-it-works' || path === '/how-it-works/' || path === '/how') {
+      setView('how-it-works');
       return;
     }
   }, []);
@@ -684,6 +691,19 @@ function App() {
         }}
         onDeleteData={handleDeleteAllData}
         userEmail={activeAccount?.username}
+      />
+    );
+  }
+
+  // Show standalone how it works page if URL is /how-it-works
+  if (view === 'how-it-works') {
+    return (
+      <HowItWorks 
+        isStandalone={true}
+        onClose={() => {
+          window.history.replaceState({}, '', '/');
+          setView('dashboard');
+        }}
       />
     );
   }

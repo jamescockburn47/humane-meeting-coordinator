@@ -142,6 +142,12 @@ export function Sidebar({
             </div>
 
             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+                <a
+                    href="/how-it-works"
+                    className="how-link"
+                >
+                    <span style={{ fontSize: '1rem' }}>❓</span> How It Works
+                </a>
                 <div
                     className="privacy-badge"
                     onClick={onShowPrivacy}
