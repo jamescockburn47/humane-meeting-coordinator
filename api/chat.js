@@ -1194,7 +1194,7 @@ export default async function handler(req, res) {
         const anthropicKey = process.env.ANTHROPIC_API_KEY;
         const geminiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
         
-        const useClaudde = !!anthropicKey;
+        const useClaude = !!anthropicKey;
         const apiKey = anthropicKey || geminiKey;
 
         if (!apiKey) {
@@ -1209,8 +1209,8 @@ export default async function handler(req, res) {
 
         // Select model - Claude 4.5 Haiku preferred (fast, cheap, reliable), Gemini fallback
         const getModel = () => {
-            if (useClaudde) {
-                return anthropic('claude-haiku-4.5'); // Claude 4.5 Haiku - fastest, cheapest
+            if (useClaude) {
+                return anthropic('claude-haiku-4-5-20250929'); // Claude 4.5 Haiku - fastest, cheapest
             }
             return google('gemini-2.0-flash-001', { apiKey: geminiKey }); // Stable Gemini fallback
         };
