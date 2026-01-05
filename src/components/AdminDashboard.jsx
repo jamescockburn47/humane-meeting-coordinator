@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
+import { findCommonHumaneSlots } from '../services/scheduler';
 
 // Admin credentials (password is hashed for security)
 const ADMIN_EMAIL = 'james.a.cockburn@gmail.com';
@@ -32,6 +33,8 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         microsoft: { status: 'unknown' }
     });
     const [logs, setLogs] = useState([]);
+    const [testResults, setTestResults] = useState(null);
+    const [testRunning, setTestRunning] = useState(false);
 
     // Check if already authenticated (session storage)
     useEffect(() => {
@@ -73,6 +76,95 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
     const addLog = (message, type = 'info') => {
         const timestamp = new Date().toLocaleTimeString();
         setLogs(prev => [...prev, { timestamp, message, type }]);
+    };
+
+    // Scheduler Test Runner
+    const runSchedulerTests = () => {
+        setTestRunning(true);
+        const results = [];
+        
+        const test = (name, fn) => {
+            try {
+                fn();
+                results.push({ name, passed: true });
+            } catch (e) {
+                results.push({ name, passed: false, error: e.message });
+            }
+        };
+
+        // Test 1: Same timezone, same windows
+        test('Same timezone, same windows → should find slots', () => {
+            const members = [
+                { email: 'a@test.com', timezone: 'Europe/London', humane_windows: [{ start: '09:00', end: '17:00', type: 'weekday' }] },
+                { email: 'b@test.com', timezone: 'Europe/London', humane_windows: [{ start: '09:00', end: '17:00', type: 'weekday' }] }
+            ];
+            const slots = findCommonHumaneSlots(members, [], '2025-01-06', '2025-01-06', 60);
+            if (slots.length === 0) throw new Error('Expected slots but found none');
+        });
+
+        // Test 2: Non-overlapping windows
+        test('Non-overlapping windows → should find no slots', () => {
+            const members = [
+                { email: 'a@test.com', timezone: 'Europe/London', humane_windows: [{ start: '09:00', end: '12:00', type: 'weekday' }] },
+                { email: 'b@test.com', timezone: 'Europe/London', humane_windows: [{ start: '14:00', end: '17:00', type: 'weekday' }] }
+            ];
+            const slots = findCommonHumaneSlots(members, [], '2025-01-06', '2025-01-06', 60);
+            if (slots.length > 0) throw new Error(`Expected 0 slots but found ${slots.length}`);
+        });
+
+        // Test 3: Narrow 8-9am window
+        test('Narrow 8-9am window → only slots within window', () => {
+            const members = [
+                { email: 'a@test.com', timezone: 'UTC', humane_windows: [{ start: '08:00', end: '09:00', type: 'weekday' }] }
+            ];
+            const slots = findCommonHumaneSlots(members, [], '2025-01-06', '2025-01-06', 60);
+            if (slots.length > 1) throw new Error(`Expected max 1 slot but found ${slots.length}`);
+        });
+
+        // Test 4: Weekend vs weekday windows
+        test('Weekday window on Saturday → no slots', () => {
+            const members = [
+                { email: 'a@test.com', timezone: 'Europe/London', humane_windows: [{ start: '09:00', end: '17:00', type: 'weekday' }] }
+            ];
+            const slots = findCommonHumaneSlots(members, [], '2025-01-04', '2025-01-04', 60); // Saturday
+            if (slots.length > 0) throw new Error(`Expected 0 slots on weekend but found ${slots.length}`);
+        });
+
+        // Test 5: Busy slots block times
+        test('Busy slots should block valid times', () => {
+            const members = [
+                { email: 'a@test.com', timezone: 'UTC', humane_windows: [{ start: '09:00', end: '11:00', type: 'weekday' }] }
+            ];
+            const busy = [{ profile_email: 'a@test.com', start_time: '2025-01-06T09:00:00Z', end_time: '2025-01-06T10:00:00Z' }];
+            const slots = findCommonHumaneSlots(members, busy, '2025-01-06', '2025-01-06', 60);
+            const blocked = slots.filter(s => new Date(s.start).getUTCHours() === 9);
+            if (blocked.length > 0) throw new Error('9:00 slot should be blocked by busy time');
+        });
+
+        // Test 6: No 23:30 slots for 9-17 window
+        test('23:30 should NOT appear for 9-17 window', () => {
+            const members = [
+                { email: 'a@test.com', timezone: 'Europe/London', humane_windows: [{ start: '09:00', end: '17:00', type: 'weekday' }] }
+            ];
+            const slots = findCommonHumaneSlots(members, [], '2025-01-06', '2025-01-06', 60);
+            const lateSlots = slots.filter(s => {
+                const h = new Date(s.start).getUTCHours();
+                return h >= 17 || h < 9;
+            });
+            if (lateSlots.length > 0) throw new Error(`Found ${lateSlots.length} slots outside 9-17 range`);
+        });
+
+        // Test 7: Null windows fallback
+        test('Null/empty windows → should use defaults', () => {
+            const members = [
+                { email: 'a@test.com', timezone: 'Europe/London', humane_windows: null, humane_start_local: '09:00', humane_end_local: '17:00' }
+            ];
+            const slots = findCommonHumaneSlots(members, [], '2025-01-06', '2025-01-06', 60);
+            if (slots.length === 0) throw new Error('Should fall back to legacy and find slots');
+        });
+
+        setTestResults(results);
+        setTestRunning(false);
     };
 
     const checkAllSystems = async () => {
@@ -486,6 +578,37 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                             <code>{import.meta.env.VITE_SUPABASE_URL || 'NOT SET!'}</code>
                         </div>
                     </div>
+                </div>
+
+                {/* Scheduler Tests */}
+                <div className="admin-section">
+                    <h3>🧪 Scheduler Tests</h3>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                        Run automated tests to verify the time-slot matching algorithm works correctly.
+                    </p>
+                    <button 
+                        className="btn-primary" 
+                        onClick={runSchedulerTests}
+                        disabled={testRunning}
+                        style={{ marginBottom: '1rem' }}
+                    >
+                        {testRunning ? 'Running...' : '▶ Run Scheduler Tests'}
+                    </button>
+                    
+                    {testResults && (
+                        <div className="test-results">
+                            <div style={{ marginBottom: '0.5rem', fontWeight: 600 }}>
+                                Results: {testResults.filter(t => t.passed).length}/{testResults.length} passed
+                            </div>
+                            {testResults.map((t, i) => (
+                                <div key={i} className={`test-result ${t.passed ? 'passed' : 'failed'}`}>
+                                    <span>{t.passed ? '✅' : '❌'}</span>
+                                    <span style={{ flex: 1 }}>{t.name}</span>
+                                    {t.error && <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>{t.error}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Troubleshooting */}

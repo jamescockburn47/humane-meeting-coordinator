@@ -862,6 +862,35 @@ label {
   text-align: center;
 }
 
+/* --- Scheduler Test Results --- */
+.test-results {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+
+.test-result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.test-result:last-child {
+  border-bottom: none;
+}
+
+.test-result.passed {
+  color: #22c55e;
+}
+
+.test-result.failed {
+  color: #ef4444;
+}
+
 .join-options {
   text-align: center;
 }
