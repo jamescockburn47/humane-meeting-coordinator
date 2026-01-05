@@ -175,7 +175,7 @@ function SlotCard({ slot, onClick, members, showPartial = false }) {
     );
 }
 
-export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook, onDeleteGroup }) {
+export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook, onDeleteGroup, onMembersLoaded }) {
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]);
     const [duration, setDuration] = useState(60); // Default 60 minutes
@@ -194,6 +194,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
     const loadData = async () => {
         const mems = await getGroupMembers(group.id);
         setMembers(mems);
+        if (onMembersLoaded) onMembersLoaded(mems);
         const details = await getGroupDetails(group.id);
         if (details) setFullGroupDetails(details);
     };

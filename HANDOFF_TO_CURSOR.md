@@ -66,6 +66,8 @@ To get a Gemini API key:
 ## 7. Key Files
 *   `src/App.jsx`: Main routing and UI state manager.
 *   `src/components/GroupView.jsx`: The core UI for the meeting group (Member list + Search).
+*   `src/components/SchedulingAssistant.jsx`: AI chat assistant (Gemini-powered).
 *   `src/services/scheduler.js`: The "Brain". Contains `findCommonHumaneSlots` algorithm.
 *   `src/services/supabase.js`: Database interaction layer.
 *   `src/authConfig.js`: MSAL configuration (verify `redirectUri` here!).
+*   `api/chat.js`: Vercel serverless function for AI assistant API.

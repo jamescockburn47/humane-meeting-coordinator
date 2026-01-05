@@ -1,16 +1,41 @@
 import { useState, useRef, useEffect } from "react";
 
-export function SchedulingAssistant() {
+export function SchedulingAssistant({ 
+    currentUser = null,
+    currentGroup = null, 
+    groupMembers = [],
+    suggestions = [],
+    humaneWindows = []
+}) {
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState([
-        {
-            role: "assistant",
-            content: "Hi! I'm here to help you with scheduling. Ask me anything about how Humane Calendar works, timezone coordination, or setting up your availability.",
-        },
-    ]);
+    const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
+
+    // Build initial message based on context
+    useEffect(() => {
+        let greeting = "Hi! I can help you with scheduling.";
+        
+        if (currentGroup && groupMembers.length > 0) {
+            greeting = `Hi! I can see you're in the group "${currentGroup.name}" with ${groupMembers.length} members. `;
+            if (suggestions.length > 0) {
+                const fullMatches = suggestions.filter(s => s.isFullMatch);
+                if (fullMatches.length > 0) {
+                    greeting += `Good news — there are ${fullMatches.length} times when everyone is available. `;
+                } else {
+                    greeting += `I see there are ${suggestions.length} partial matches, but no times when everyone is free. I can help you figure out how to find a slot that works. `;
+                }
+            } else {
+                greeting += `No slots have been searched yet. Try clicking "Search" to find available times. `;
+            }
+            greeting += "What would you like to know?";
+        } else if (currentUser) {
+            greeting = `Hi ${currentUser.name?.split(' ')[0] || 'there'}! I can help you with scheduling across timezones. What would you like to know?`;
+        }
+        
+        setMessages([{ role: "assistant", content: greeting }]);
+    }, [currentGroup?.id, groupMembers.length, suggestions.length]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,6 +54,34 @@ export function SchedulingAssistant() {
         setIsLoading(true);
 
         try {
+            // Build context object to send to API
+            const context = {
+                user: currentUser ? {
+                    name: currentUser.name,
+                    email: currentUser.username,
+                    provider: currentUser.provider,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    humaneWindows: humaneWindows
+                } : null,
+                group: currentGroup ? {
+                    name: currentGroup.name,
+                    memberCount: groupMembers.length
+                } : null,
+                members: groupMembers.map(m => ({
+                    name: m.display_name || m.email?.split('@')[0],
+                    timezone: m.timezone,
+                    windows: m.humane_windows
+                })),
+                suggestions: suggestions.slice(0, 10).map(s => ({
+                    start: s.start,
+                    end: s.end,
+                    availableCount: s.availableMembers?.length || 0,
+                    totalMembers: groupMembers.length,
+                    isFullMatch: s.isFullMatch,
+                    unavailable: s.unavailableMembers?.map(m => m.display_name || m.email?.split('@')[0]) || []
+                }))
+            };
+
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -37,6 +90,7 @@ export function SchedulingAssistant() {
                         role: m.role,
                         content: m.content,
                     })),
+                    context
                 }),
             });
 
@@ -74,11 +128,35 @@ export function SchedulingAssistant() {
         }
     };
 
-    const quickQuestions = [
-        "How do I invite someone?",
-        "How do timezones work?",
-        "Is my calendar data safe?",
-    ];
+    // Context-aware quick questions
+    const getQuickQuestions = () => {
+        if (currentGroup && suggestions.length === 0) {
+            return [
+                "How do I find available times?",
+                "How do I change my availability?",
+                "How do timezones work?"
+            ];
+        }
+        if (currentGroup && suggestions.length > 0 && !suggestions.some(s => s.isFullMatch)) {
+            return [
+                "Why is no one fully available?",
+                "What times would work?",
+                "How can I adjust my hours?"
+            ];
+        }
+        if (currentGroup && suggestions.some(s => s.isFullMatch)) {
+            return [
+                "How do I send the invite?",
+                "What happens when I book?",
+                "Can I change the meeting length?"
+            ];
+        }
+        return [
+            "How do I create a group?",
+            "How do timezones work?",
+            "Is my calendar data safe?"
+        ];
+    };
 
     return (
         <>
@@ -101,7 +179,9 @@ export function SchedulingAssistant() {
                     <div className="assistant-header">
                         <div className="assistant-header-info">
                             <span className="assistant-title">Scheduling Assistant</span>
-                            <span className="assistant-subtitle">Ask me anything</span>
+                            <span className="assistant-subtitle">
+                                {currentGroup ? `Helping with: ${currentGroup.name}` : 'Ask me anything'}
+                            </span>
                         </div>
                         <button
                             onClick={() => setIsOpen(false)}
@@ -138,7 +218,7 @@ export function SchedulingAssistant() {
                     {/* Quick Questions (show only at start) */}
                     {messages.length === 1 && (
                         <div className="assistant-quick-questions">
-                            {quickQuestions.map((q, i) => (
+                            {getQuickQuestions().map((q, i) => (
                                 <button
                                     key={i}
                                     onClick={() => {
@@ -160,7 +240,7 @@ export function SchedulingAssistant() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder="Type your question..."
+                            placeholder="Ask about scheduling..."
                             disabled={isLoading}
                         />
                         <button

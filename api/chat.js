@@ -1,67 +1,126 @@
 import { GoogleGenAI } from "@google/genai";
 
-// System prompt with Humane Calendar knowledge
-const SYSTEM_PROMPT = `You are the Humane Calendar Assistant. You help users understand how to use the app and answer questions about scheduling across timezones.
+// Build system prompt with context
+function buildSystemPrompt(context) {
+    let prompt = `You are a scheduling assistant for Humane Calendar. You ONLY help with:
+- Understanding how the app works
+- Finding meeting times that work for everyone
+- Explaining timezone differences
+- Suggesting availability changes
+- Privacy questions about the app
 
-## About Humane Calendar
+STRICT RULES:
+1. DO NOT discuss topics unrelated to scheduling or this app
+2. If asked about anything else, politely redirect: "I can only help with scheduling. What would you like to know about finding a meeting time?"
+3. Keep responses SHORT (2-3 sentences max unless explaining a specific process)
+4. Be direct and actionable
+5. Use British English
 
-Humane Calendar is a scheduling tool designed for global teams and side projects. Unlike other tools:
+## How Humane Calendar Works
+- Each person sets their available times (in their own timezone)
+- The app finds where everyone overlaps
+- The organiser picks a slot and sends a calendar invite
+- Invites include a Google Meet or Teams video link
 
-- **Each person picks their own available times** in their own timezone
-- **The organiser sees the overlap** and sends the invite (it doesn't auto-book)
-- **Respects personal boundaries** - only times people actively offer are considered
-- **Privacy-first** - we only see busy/free times, never event details
+## Key Concepts
+- "Humane Windows": The hours someone is willing to meet (e.g., 9am-5pm weekdays)
+- "Full Match": A time when EVERYONE in the group is available
+- "Partial Match": A time when some but not all members are available
+- Timezones: Each person's times are converted to find true overlaps`;
 
-## How It Works
+    // Add user context if available
+    if (context?.user) {
+        prompt += `\n\n## Current User
+- Name: ${context.user.name || 'Unknown'}
+- Timezone: ${context.user.timezone || 'Unknown'}
+- Their availability windows: ${JSON.stringify(context.user.humaneWindows || [])}`;
+    }
 
-1. **Create a Group**: The organiser creates a scheduling group
-2. **Share the Link**: Send the invite link to participants
-3. **Everyone Sets Availability**: Each person selects when they're genuinely free (in their local timezone)
-4. **Find the Overlap**: The system shows where everyone's schedules align
-5. **Send the Invite**: The organiser picks a slot and sends a calendar invite with video link
+    // Add group context if available
+    if (context?.group) {
+        prompt += `\n\n## Current Group: "${context.group.name}"
+- ${context.group.memberCount} members`;
+    }
 
-## Key Features
+    // Add member details
+    if (context?.members?.length > 0) {
+        prompt += `\n\n## Group Members`;
+        context.members.forEach((m, i) => {
+            prompt += `\n${i + 1}. ${m.name} (${m.timezone || 'Unknown timezone'})`;
+            if (m.windows?.length > 0) {
+                const windowDesc = m.windows.map(w => `${w.start}-${w.end} ${w.type}`).join(', ');
+                prompt += ` - Available: ${windowDesc}`;
+            }
+        });
+    }
 
-- **Multi-timezone Support**: Each person's times are shown in their local timezone
-- **Humane Windows**: Define your general availability (e.g., "9am-5pm weekdays")
-- **Guest Mode**: Participants don't need an account - just click the link and set times
-- **Calendar Overlay** (Optional): Connect Google/Microsoft to see your busy times
-- **One-Click Invite**: Sends Google Calendar/Outlook invite with Meet/Teams link
+    // Add suggestion analysis
+    if (context?.suggestions?.length > 0) {
+        const fullMatches = context.suggestions.filter(s => s.isFullMatch);
+        const partialMatches = context.suggestions.filter(s => !s.isFullMatch);
 
-## Privacy
+        prompt += `\n\n## Current Search Results`;
+        
+        if (fullMatches.length > 0) {
+            prompt += `\n\nFULL MATCHES (everyone available): ${fullMatches.length} times found`;
+            fullMatches.slice(0, 3).forEach(s => {
+                const date = new Date(s.start);
+                prompt += `\n- ${date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} at ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+            });
+        } else {
+            prompt += `\n\nNO FULL MATCHES - no time works for everyone`;
+        }
 
-- We only access busy/free times, never event titles or details
-- Guest mode requires zero data access
-- Availability data auto-deletes after 30 days
-- No third-party data sharing
+        if (partialMatches.length > 0) {
+            prompt += `\n\nPARTIAL MATCHES: ${partialMatches.length} times where some people are available`;
+            
+            // Analyze who is blocking
+            const blockerCount = {};
+            partialMatches.forEach(s => {
+                (s.unavailable || []).forEach(name => {
+                    blockerCount[name] = (blockerCount[name] || 0) + 1;
+                });
+            });
+            
+            const sortedBlockers = Object.entries(blockerCount).sort((a, b) => b[1] - a[1]);
+            if (sortedBlockers.length > 0) {
+                prompt += `\n\nWho is unavailable most often:`;
+                sortedBlockers.forEach(([name, count]) => {
+                    prompt += `\n- ${name}: unavailable for ${count} of ${partialMatches.length} partial slots`;
+                });
+            }
+        }
 
-## Common Questions
+        // Suggest actions based on analysis
+        prompt += `\n\n## What You Should Suggest`;
+        if (fullMatches.length > 0) {
+            prompt += `\n- Encourage them to pick a full match slot and send the invite`;
+            prompt += `\n- Explain they can click on a time slot to see the booking form`;
+        } else if (partialMatches.length > 0) {
+            prompt += `\n- Explain that no time works for everyone`;
+            if (Object.keys(blockerCount || {}).length > 0) {
+                const topBlocker = sortedBlockers[0];
+                prompt += `\n- Suggest asking ${topBlocker[0]} if they can adjust their availability`;
+                prompt += `\n- Or suggest the organiser expands the date range`;
+            }
+            prompt += `\n- They can still send an invite to a partial slot if needed`;
+        } else {
+            prompt += `\n- Suggest clicking "Search" to find available times`;
+            prompt += `\n- Make sure the date range covers enough days`;
+        }
+    }
 
-**Q: Do invitees need to create an account?**
-A: No. They can use Guest Mode - just enter name, email, and select available times.
+    prompt += `\n\n## Changing Availability
+To change availability:
+1. Click on your profile/settings
+2. Add or edit "Humane Windows" (the hours you're willing to meet)
+3. You can set different times for weekdays vs weekends
+4. Save changes and search again
 
-**Q: Does it book the meeting automatically?**
-A: No. It shows the overlap, then the organiser decides and clicks to send the invite.
+If someone else needs to change their availability, they should revisit their invite link or log in and update their settings.`;
 
-**Q: What calendar systems are supported?**
-A: Google Calendar and Microsoft Outlook/365. Apple Calendar users can download .ics files.
-
-**Q: How do timezones work?**
-A: Each person sets their availability in their local timezone. The system converts and finds true overlaps.
-
-**Q: Is my calendar data safe?**
-A: Yes. We only see busy/free status, never event names, descriptions, or attendees.
-
-## Your Role
-
-- Answer questions about how to use Humane Calendar
-- Help users understand the scheduling flow
-- Explain privacy and data handling
-- Suggest best practices for scheduling across timezones
-- Be friendly, concise, and helpful
-- Use British English spelling
-
-Keep responses brief (2-3 sentences for simple questions, more for complex ones).`;
+    return prompt;
+}
 
 export default async function handler(req, res) {
     // CORS headers
@@ -78,7 +137,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { messages } = req.body;
+        const { messages, context } = req.body;
 
         const apiKey = process.env.GEMINI_API_KEY;
 
@@ -89,8 +148,11 @@ export default async function handler(req, res) {
 
         const ai = new GoogleGenAI({ apiKey });
 
+        // Build dynamic system prompt with context
+        const systemPrompt = buildSystemPrompt(context);
+
         // Build conversation for Gemini
-        let conversationText = SYSTEM_PROMPT + "\n\n---\n\nConversation:\n";
+        let conversationText = systemPrompt + "\n\n---\n\nConversation:\n";
 
         for (const msg of messages) {
             const role = msg.role === "user" ? "User" : "Assistant";

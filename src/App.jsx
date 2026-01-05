@@ -28,6 +28,7 @@ function App() {
   const [view, setView] = useState('dashboard');
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [currentGroupMembers, setCurrentGroupMembers] = useState([]);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
@@ -989,7 +990,10 @@ function App() {
           <GroupView
             group={selectedGroup}
             currentUser={activeAccount}
-            onBack={() => setView('dashboard')}
+            onBack={() => {
+              setView('dashboard');
+              setCurrentGroupMembers([]);
+            }}
             onFindTimes={handleFindTimes}
             suggestions={suggestions}
             loading={loading}
@@ -997,8 +1001,10 @@ function App() {
             onDeleteGroup={(groupId) => {
               setGroups(prev => prev.filter(g => g.id !== groupId));
               setSelectedGroup(null);
+              setCurrentGroupMembers([]);
               setView('dashboard');
             }}
+            onMembersLoaded={setCurrentGroupMembers}
           />
         )}
 
@@ -1012,7 +1018,13 @@ function App() {
       </main>
       
       {/* AI Scheduling Assistant */}
-      <SchedulingAssistant />
+      <SchedulingAssistant 
+        currentUser={activeAccount}
+        currentGroup={selectedGroup}
+        groupMembers={currentGroupMembers}
+        suggestions={suggestions}
+        humaneWindows={humaneWindows}
+      />
     </div>
   )
 }
