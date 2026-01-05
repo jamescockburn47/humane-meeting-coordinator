@@ -1117,6 +1117,19 @@ function App() {
             <button className="btn-ghost" onClick={() => setView('dashboard')}>Go to Dashboard</button>
           </div>
         )}
+        {/* Footer with legal links - visible for Google verification */}
+        <footer className="app-footer">
+          <div className="footer-links">
+            <a href="/privacy" className="footer-link">Privacy Policy</a>
+            <span className="footer-divider">•</span>
+            <a href="/terms" className="footer-link">Terms of Service</a>
+            <span className="footer-divider">•</span>
+            <a href="/how-it-works" className="footer-link">How It Works</a>
+          </div>
+          <div className="footer-brand">
+            © 2025 Humane Calendar
+          </div>
+        </footer>
       </main>
       
       {/* AI Scheduling Assistant */}

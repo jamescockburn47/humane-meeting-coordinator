@@ -53,6 +53,46 @@ body {
   height: 100%;
 }
 
+/* --- App Footer --- */
+.app-footer {
+  margin-top: auto;
+  padding: 2rem;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sidebar);
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.footer-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: var(--primary);
+}
+
+.footer-divider {
+  color: var(--border);
+  font-size: 0.75rem;
+}
+
+.footer-brand {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
 /* --- Sidebar --- */
 .sidebar {
   width: 260px;
