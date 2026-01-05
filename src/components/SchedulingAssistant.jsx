@@ -67,9 +67,12 @@ export function SchedulingAssistant({
             humaneWindows: humaneWindows
         } : null,
         group: currentGroup ? {
+            id: currentGroup.id,
             name: currentGroup.name,
-            memberCount: groupMembers.length
+            memberCount: groupMembers.length,
+            invite_code: currentGroup.invite_code
         } : null,
+        inviteCode: currentGroup?.invite_code || currentGroup?.id,
         members: groupMembers.map(m => ({
             name: m.display_name || m.email?.split('@')[0],
             email: m.email,

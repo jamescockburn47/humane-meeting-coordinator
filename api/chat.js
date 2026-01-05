@@ -270,33 +270,39 @@ function getSuggestionForHour(localHour) {
 
 // Build enhanced system prompt
 function buildSystemPrompt(context) {
-    let prompt = `You are an AI scheduling agent for Humane Calendar. You help people find meeting times across timezones.
+    let prompt = `You are an advanced AI scheduling agent for Humane Calendar. You help organisers coordinate meetings across timezones.
 
-## YOUR CAPABILITIES
-You have access to tools that can:
-1. **analyze_timezone_overlap** - Analyze the group's timezone spread and find optimal meeting hours
-2. **suggest_member_changes** - Get specific suggestions for what a member should change
-3. **generate_message** - Create a copy-paste message to send to a member
+## YOUR TOOLS
+You have powerful tools - USE THEM:
+1. **summarize_group** - Get overview of members, timezones, search status. Use this first!
+2. **analyze_timezone_overlap** - Deep analysis of timezone spread and optimal hours
+3. **suggest_member_changes** - Specific suggestions for what a member should change
+4. **get_member_details** - Look up a specific member's timezone and availability
+5. **generate_message** - Create a copy-paste message to send to a member
+6. **suggest_meeting_format** - Alternative formats (async, split groups, rotating times)
+7. **get_invite_link** - Get the link to invite new members
 
-## HOW TO RESPOND
+## WHEN TO USE TOOLS
 
-When someone asks about finding times or why there's no overlap:
-1. ALWAYS use the analyze_timezone_overlap tool first
-2. Explain the timezone situation clearly
-3. If someone needs to adjust, offer to generate a message for them
+**"Why can't we find a time?"** → Use analyze_timezone_overlap, then explain clearly
 
-When someone asks for a message:
-1. Use generate_message tool
-2. Present the message in a copyable format
-3. Keep tone friendly and non-demanding
+**"What should Sarah do?"** → Use suggest_member_changes with their name
 
-## RULES
-1. ONLY discuss scheduling topics. Redirect other questions politely.
-2. Be concise - 2-3 sentences for simple questions
-3. Use British English
-4. Never suggest times between midnight-6am unless specifically asked
-5. Be fair - don't always ask the same person to adjust
-6. When presenting messages, format them clearly so they're easy to copy
+**"Write a message for Mike"** → Use generate_message with friendly tone
+
+**"What are our options?"** → Use suggest_meeting_format for alternatives
+
+**"Who's in the group?"** → Use summarize_group for overview
+
+**"How do I invite someone?"** → Use get_invite_link
+
+## RESPONSE STYLE
+1. Be direct and actionable - organisers are busy
+2. Use British English
+3. When you generate a message, format it clearly for easy copying
+4. Don't suggest midnight-6am times
+5. Be fair - rotate who takes inconvenient times
+6. If stuck, suggest alternative meeting formats
 
 ## CONTEXT`;
 
@@ -327,13 +333,149 @@ When someone asks for a message:
     return prompt;
 }
 
+// Additional tool implementations
+
+function getMemberDetails(context, memberName) {
+    const members = context?.members || [];
+    const member = members.find(m => 
+        m.name?.toLowerCase().includes(memberName.toLowerCase())
+    );
+    
+    if (!member) {
+        return { error: `Could not find member "${memberName}"` };
+    }
+
+    const offset = estimateTimezoneOffset(member.timezone || 'UTC');
+    
+    return {
+        name: member.name,
+        email: member.email,
+        timezone: member.timezone,
+        utcOffset: `UTC${offset >= 0 ? '+' : ''}${offset}`,
+        availabilityWindows: member.windows || [],
+        currentLocalTime: `Approximately ${formatHour((new Date().getUTCHours() + offset + 24) % 24)}`
+    };
+}
+
+function suggestMeetingFormat(context) {
+    const members = context?.members || [];
+    const suggestions = context?.suggestions || [];
+    const fullMatches = suggestions.filter(s => s.isFullMatch);
+    
+    const formats = [];
+    
+    if (fullMatches.length > 0) {
+        formats.push({
+            format: 'Standard meeting',
+            recommendation: 'Recommended',
+            reason: `${fullMatches.length} times work for everyone. Pick one and send the invite.`
+        });
+    }
+    
+    if (members.length > 3 && fullMatches.length === 0) {
+        formats.push({
+            format: 'Split into smaller groups',
+            recommendation: 'Consider',
+            reason: 'Large groups across timezones are hard. Consider regional sub-meetings.'
+        });
+    }
+    
+    // Check timezone spread
+    const offsets = members.map(m => estimateTimezoneOffset(m.timezone || 'UTC'));
+    const spread = Math.max(...offsets) - Math.min(...offsets);
+    
+    if (spread > 10) {
+        formats.push({
+            format: 'Rotating meeting times',
+            recommendation: 'Consider',
+            reason: `With ${spread}+ hour spread, rotating who takes the inconvenient slot is fairer.`
+        });
+        
+        formats.push({
+            format: 'Async update + short sync',
+            recommendation: 'Consider', 
+            reason: 'Record a video update, then have a shorter live sync with key decisions only.'
+        });
+    }
+    
+    if (fullMatches.length === 0 && suggestions.length > 0) {
+        const bestPartial = suggestions.reduce((best, s) => 
+            (s.availableCount > (best?.availableCount || 0)) ? s : best, null);
+        
+        if (bestPartial && bestPartial.availableCount >= members.length - 1) {
+            formats.push({
+                format: 'Proceed without one person',
+                recommendation: 'Option',
+                reason: `${bestPartial.availableCount}/${members.length} can make the best slot. Record for the absent member.`
+            });
+        }
+    }
+    
+    return { formats, memberCount: members.length, timezoneSpread: spread };
+}
+
+function getInviteLink(context) {
+    const group = context?.group;
+    if (!group) {
+        return { error: 'No group selected' };
+    }
+    
+    // The invite code should be passed in context
+    const code = context.inviteCode || group.invite_code || group.id;
+    const baseUrl = 'https://www.humanecalendar.com';
+    
+    return {
+        inviteLink: `${baseUrl}/join/${code}`,
+        groupName: group.name,
+        memberCount: group.memberCount,
+        instruction: 'Share this link with people you want to invite. They can set their availability without creating an account.'
+    };
+}
+
+function summarizeGroup(context) {
+    const members = context?.members || [];
+    const suggestions = context?.suggestions || [];
+    const group = context?.group;
+    
+    const fullMatches = suggestions.filter(s => s.isFullMatch);
+    const partialMatches = suggestions.filter(s => !s.isFullMatch);
+    
+    // Timezone analysis
+    const timezones = members.map(m => ({
+        name: m.name,
+        tz: m.timezone,
+        offset: estimateTimezoneOffset(m.timezone || 'UTC')
+    }));
+    
+    const sortedByTz = [...timezones].sort((a, b) => a.offset - b.offset);
+    const spread = sortedByTz.length > 0 
+        ? sortedByTz[sortedByTz.length - 1].offset - sortedByTz[0].offset 
+        : 0;
+    
+    return {
+        groupName: group?.name || 'Unknown',
+        memberCount: members.length,
+        members: members.map(m => `${m.name} (${m.timezone || 'Unknown'})`),
+        timezoneSpread: `${spread} hours`,
+        easternmost: sortedByTz[sortedByTz.length - 1]?.name,
+        westernmost: sortedByTz[0]?.name,
+        searchResults: {
+            fullMatches: fullMatches.length,
+            partialMatches: partialMatches.length,
+            status: fullMatches.length > 0 ? 'Ready to book!' : 
+                    partialMatches.length > 0 ? 'No perfect time, but options exist' : 
+                    'No search run yet'
+        }
+    };
+}
+
 // Define tools using Vercel AI SDK format
 const tools = {
     analyze_timezone_overlap: tool({
         description: 'Analyze the timezone overlap for the current group. Use this when the user asks why there is no overlap, what times would work, or how to find a meeting time.',
         parameters: z.object({}),
-        execute: async (params, { context }) => {
-            return analyzeTimezoneOverlap(context);
+        execute: async () => {
+            return { needsContext: true };
         }
     }),
     
@@ -343,8 +485,8 @@ const tools = {
             memberName: z.string().describe('The name of the member to get suggestions for'),
             targetTimeUTC: z.string().optional().describe('Optional target time in UTC (e.g., "14" for 2pm UTC)')
         }),
-        execute: async ({ memberName, targetTimeUTC }, { context }) => {
-            return suggestChangesForMember(context, memberName, targetTimeUTC);
+        execute: async () => {
+            return { needsContext: true };
         }
     }),
     
@@ -355,8 +497,42 @@ const tools = {
             messageType: z.enum(['expand_hours', 'try_date', 'general']).describe('Type of message: expand_hours (ask to add hours), try_date (check specific dates), or general'),
             specificSuggestion: z.string().optional().describe('Optional specific suggestion to include in the message')
         }),
-        execute: async ({ memberName, messageType, specificSuggestion }, { context }) => {
-            return generateMessageForMember(context, memberName, messageType, specificSuggestion);
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    get_member_details: tool({
+        description: 'Get detailed information about a specific group member including their timezone, availability windows, and current local time.',
+        parameters: z.object({
+            memberName: z.string().describe('The name of the member to look up')
+        }),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    suggest_meeting_format: tool({
+        description: 'Suggest alternative meeting formats when a standard meeting is hard to schedule. Good for large groups or extreme timezone spreads.',
+        parameters: z.object({}),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    get_invite_link: tool({
+        description: 'Get the invite link to share with new members so they can join the group and set their availability.',
+        parameters: z.object({}),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    summarize_group: tool({
+        description: 'Get a summary of the current group including members, timezones, and search status. Use this to understand the current situation.',
+        parameters: z.object({}),
+        execute: async () => {
+            return { needsContext: true };
         }
     })
 };
@@ -448,7 +624,7 @@ export default async function handler(req, res) {
             const systemPrompt = buildSystemPrompt(context);
 
             const result = await generateText({
-                model: google('gemini-2.0-flash-001', { apiKey }), // Using 2.0 as 3.0 may not be stable
+                model: google('gemini-2.5-flash-preview-05-20', { apiKey }), // Gemini 2.5 Flash (latest stable)
                 system: systemPrompt,
                 messages: conversationMessages,
                 tools,
@@ -456,19 +632,36 @@ export default async function handler(req, res) {
                 maxSteps: 5
             });
 
-            // Collect tool results
+            // Collect tool results - execute tools with context
             const toolResults = [];
             if (result.steps) {
                 for (const step of result.steps) {
                     if (step.toolCalls) {
                         for (const tc of step.toolCalls) {
                             let toolResult;
-                            if (tc.toolName === 'analyze_timezone_overlap') {
-                                toolResult = analyzeTimezoneOverlap(context);
-                            } else if (tc.toolName === 'suggest_member_changes') {
-                                toolResult = suggestChangesForMember(context, tc.args.memberName, tc.args.targetTimeUTC);
-                            } else if (tc.toolName === 'generate_message') {
-                                toolResult = generateMessageForMember(context, tc.args.memberName, tc.args.messageType, tc.args.specificSuggestion);
+                            
+                            switch (tc.toolName) {
+                                case 'analyze_timezone_overlap':
+                                    toolResult = analyzeTimezoneOverlap(context);
+                                    break;
+                                case 'suggest_member_changes':
+                                    toolResult = suggestChangesForMember(context, tc.args.memberName, tc.args.targetTimeUTC);
+                                    break;
+                                case 'generate_message':
+                                    toolResult = generateMessageForMember(context, tc.args.memberName, tc.args.messageType, tc.args.specificSuggestion);
+                                    break;
+                                case 'get_member_details':
+                                    toolResult = getMemberDetails(context, tc.args.memberName);
+                                    break;
+                                case 'suggest_meeting_format':
+                                    toolResult = suggestMeetingFormat(context);
+                                    break;
+                                case 'get_invite_link':
+                                    toolResult = getInviteLink(context);
+                                    break;
+                                case 'summarize_group':
+                                    toolResult = summarizeGroup(context);
+                                    break;
                             }
                             
                             if (toolResult) {
