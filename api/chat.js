@@ -275,13 +275,25 @@ function buildSystemPrompt(context) {
 
 ## YOUR TOOLS
 You have powerful tools - USE THEM:
+
+**Core Tools:**
 1. **summarize_group** - Get overview of members, timezones, search status. Use this first!
 2. **analyze_timezone_overlap** - Deep analysis of timezone spread and optimal hours
 3. **suggest_member_changes** - Specific suggestions for what a member should change
 4. **get_member_details** - Look up a specific member's timezone and availability
 5. **generate_message** - Create a copy-paste message to send to a member
-6. **suggest_meeting_format** - Alternative formats (async, split groups, rotating times)
-7. **get_invite_link** - Get the link to invite new members
+
+**Advanced Tools:**
+6. **find_next_slot** - Find the next available time that works for everyone
+7. **prepare_booking** - Prepare meeting details ready to book
+8. **send_nudge** - Generate reminders for members who haven't responded
+9. **broadcast_message** - Message all members at once
+10. **check_holidays** - Check for public holiday conflicts
+11. **suggest_fair_rotation** - Fair rotation for recurring meetings
+12. **split_by_timezone** - Suggest splitting large groups by timezone
+13. **parse_availability** - Understand natural language availability like "Thursday evenings"
+14. **suggest_meeting_format** - Alternative formats (async, split groups, rotating times)
+15. **get_invite_link** - Get the link to invite new members
 
 ## WHEN TO USE TOOLS
 
@@ -559,6 +571,398 @@ function checkCalendarConflicts(context, timeSlotISO) {
     };
 }
 
+// NEW TOOLS - All optional, enhance organiser experience
+
+function findNextSlot(context, daysAhead = 14) {
+    const members = context?.members || [];
+    const suggestions = context?.suggestions || [];
+    
+    // Get full matches sorted by date
+    const fullMatches = suggestions
+        .filter(s => s.isFullMatch)
+        .sort((a, b) => new Date(a.start) - new Date(b.start));
+    
+    if (fullMatches.length > 0) {
+        const next = fullMatches[0];
+        return {
+            found: true,
+            slot: {
+                start: next.start,
+                end: next.end,
+                localTimes: members.map(m => ({
+                    name: m.name,
+                    localTime: convertToLocalTime(next.start, m.timezone)
+                }))
+            },
+            alternatives: fullMatches.slice(1, 4).map(s => s.start),
+            message: `Found a slot that works for everyone!`
+        };
+    }
+    
+    // No perfect match - find best partial
+    const bestPartial = suggestions
+        .filter(s => !s.isFullMatch)
+        .sort((a, b) => (b.availableCount || 0) - (a.availableCount || 0))[0];
+    
+    if (bestPartial) {
+        return {
+            found: false,
+            bestPartial: {
+                start: bestPartial.start,
+                availableCount: bestPartial.availableCount,
+                totalMembers: members.length,
+                missing: bestPartial.missingMembers || []
+            },
+            message: `No perfect slot found. Best option has ${bestPartial.availableCount}/${members.length} available.`
+        };
+    }
+    
+    return {
+        found: false,
+        message: 'No slots found. Try running a search first, or ask members to add more availability.'
+    };
+}
+
+function convertToLocalTime(isoTime, timezone) {
+    try {
+        const date = new Date(isoTime);
+        return date.toLocaleString('en-GB', { 
+            timeZone: timezone, 
+            weekday: 'short',
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit', 
+            minute: '2-digit'
+        });
+    } catch {
+        return isoTime;
+    }
+}
+
+function broadcastMessage(context, messageContent, messageType = 'update') {
+    const members = context?.members || [];
+    const organiser = context?.user?.name || 'the organiser';
+    const groupName = context?.group?.name || 'our meeting';
+    
+    const messages = members.map(member => {
+        const firstName = member.name?.split(' ')[0] || 'there';
+        const localTime = member.timezone ? `(${member.timezone})` : '';
+        
+        let personalised = messageContent
+            .replace('{name}', firstName)
+            .replace('{timezone}', localTime);
+        
+        return {
+            recipientName: member.name,
+            recipientEmail: member.email,
+            message: `Hi ${firstName}!\n\n${personalised}\n\nThanks,\n${organiser}`
+        };
+    });
+    
+    return {
+        messageCount: messages.length,
+        messages,
+        copyAllText: messages.map(m => `To: ${m.recipientName}\n${m.message}`).join('\n\n---\n\n')
+    };
+}
+
+function checkHolidays(context, dateToCheck) {
+    const members = context?.members || [];
+    
+    // Common public holidays by country/region (simplified)
+    const holidays = {
+        'AU': { '01-26': 'Australia Day', '04-25': 'ANZAC Day', '12-25': 'Christmas', '12-26': 'Boxing Day' },
+        'US': { '01-01': 'New Year', '07-04': 'Independence Day', '11-28': 'Thanksgiving', '12-25': 'Christmas' },
+        'UK': { '12-25': 'Christmas', '12-26': 'Boxing Day', '01-01': 'New Year' },
+        'NZ': { '02-06': 'Waitangi Day', '04-25': 'ANZAC Day', '12-25': 'Christmas' },
+        'CA': { '07-01': 'Canada Day', '12-25': 'Christmas', '12-26': 'Boxing Day' },
+        'IN': { '01-26': 'Republic Day', '08-15': 'Independence Day', '10-02': 'Gandhi Jayanti' },
+        'SG': { '08-09': 'National Day', '12-25': 'Christmas' },
+        'HK': { '07-01': 'SAR Day', '10-01': 'National Day' },
+        'JP': { '01-01': 'New Year', '02-11': 'National Foundation', '05-03': 'Constitution Day' }
+    };
+    
+    // Map timezones to country codes
+    const tzToCountry = {
+        'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU',
+        'America/New_York': 'US', 'America/Los_Angeles': 'US', 'America/Chicago': 'US',
+        'Europe/London': 'UK',
+        'Pacific/Auckland': 'NZ',
+        'America/Toronto': 'CA', 'America/Vancouver': 'CA',
+        'Asia/Kolkata': 'IN', 'Asia/Mumbai': 'IN',
+        'Asia/Singapore': 'SG',
+        'Asia/Hong_Kong': 'HK',
+        'Asia/Tokyo': 'JP'
+    };
+    
+    const checkDate = new Date(dateToCheck);
+    const monthDay = `${(checkDate.getMonth() + 1).toString().padStart(2, '0')}-${checkDate.getDate().toString().padStart(2, '0')}`;
+    
+    const warnings = [];
+    
+    for (const member of members) {
+        const country = tzToCountry[member.timezone];
+        if (country && holidays[country]?.[monthDay]) {
+            warnings.push({
+                member: member.name,
+                country,
+                holiday: holidays[country][monthDay],
+                warning: `${member.name} may be off - it's ${holidays[country][monthDay]} in their country`
+            });
+        }
+    }
+    
+    return {
+        date: dateToCheck,
+        hasHolidayConflicts: warnings.length > 0,
+        warnings,
+        message: warnings.length > 0 
+            ? `⚠️ ${warnings.length} potential holiday conflict(s) found`
+            : '✅ No known public holidays for group members on this date'
+    };
+}
+
+function suggestFairRotation(context) {
+    const members = context?.members || [];
+    
+    // Calculate "inconvenience scores" based on timezone offset from group average
+    const offsets = members.map(m => ({
+        name: m.name,
+        timezone: m.timezone,
+        offset: estimateTimezoneOffset(m.timezone || 'UTC')
+    }));
+    
+    const avgOffset = offsets.reduce((sum, m) => sum + m.offset, 0) / offsets.length;
+    
+    const ranked = offsets.map(m => ({
+        ...m,
+        distanceFromAvg: Math.abs(m.offset - avgOffset),
+        position: m.offset < avgOffset ? 'west' : 'east'
+    })).sort((a, b) => b.distanceFromAvg - a.distanceFromAvg);
+    
+    // Generate rotation suggestion
+    const rotation = [];
+    const westMembers = ranked.filter(m => m.position === 'west');
+    const eastMembers = ranked.filter(m => m.position === 'east');
+    
+    // Alternate between asking east and west to stretch
+    for (let i = 0; i < Math.max(westMembers.length, eastMembers.length); i++) {
+        if (eastMembers[i]) rotation.push({ week: rotation.length + 1, earlyBird: eastMembers[i].name, reason: 'Takes early slot (east)' });
+        if (westMembers[i]) rotation.push({ week: rotation.length + 1, earlyBird: westMembers[i].name, reason: 'Takes late slot (west)' });
+    }
+    
+    return {
+        memberCount: members.length,
+        timezoneSpread: Math.max(...offsets.map(o => o.offset)) - Math.min(...offsets.map(o => o.offset)),
+        rankedByInconvenience: ranked,
+        suggestedRotation: rotation.slice(0, 4),
+        message: 'For fairness, rotate who takes the inconvenient time slot each meeting.'
+    };
+}
+
+function splitByTimezone(context) {
+    const members = context?.members || [];
+    
+    if (members.length < 4) {
+        return {
+            shouldSplit: false,
+            message: 'Group is small enough for a single meeting.'
+        };
+    }
+    
+    const withOffsets = members.map(m => ({
+        ...m,
+        offset: estimateTimezoneOffset(m.timezone || 'UTC')
+    }));
+    
+    // Sort by offset
+    withOffsets.sort((a, b) => a.offset - b.offset);
+    
+    // Find natural break point (largest gap)
+    let maxGap = 0;
+    let splitIndex = Math.floor(withOffsets.length / 2);
+    
+    for (let i = 1; i < withOffsets.length; i++) {
+        const gap = withOffsets[i].offset - withOffsets[i-1].offset;
+        if (gap > maxGap) {
+            maxGap = gap;
+            splitIndex = i;
+        }
+    }
+    
+    const group1 = withOffsets.slice(0, splitIndex);
+    const group2 = withOffsets.slice(splitIndex);
+    
+    // Suggest times for each group
+    const group1AvgOffset = group1.reduce((s, m) => s + m.offset, 0) / group1.length;
+    const group2AvgOffset = group2.reduce((s, m) => s + m.offset, 0) / group2.length;
+    
+    return {
+        shouldSplit: maxGap >= 6,
+        gap: maxGap,
+        groups: [
+            {
+                name: 'Group A (West)',
+                members: group1.map(m => m.name),
+                suggestedTimeUTC: `${Math.round(14 - group1AvgOffset)}:00 UTC`,
+                regions: [...new Set(group1.map(m => m.timezone?.split('/')[0]))]
+            },
+            {
+                name: 'Group B (East)',
+                members: group2.map(m => m.name),
+                suggestedTimeUTC: `${Math.round(9 - group2AvgOffset + 24) % 24}:00 UTC`,
+                regions: [...new Set(group2.map(m => m.timezone?.split('/')[0]))]
+            }
+        ],
+        message: maxGap >= 6 
+            ? `Consider splitting: ${maxGap}hr gap between groups`
+            : 'Single meeting is feasible, but split could help.'
+    };
+}
+
+function parseAvailabilityUpdate(naturalLanguage) {
+    // Parse natural language availability updates
+    const input = naturalLanguage.toLowerCase();
+    
+    const dayPatterns = {
+        'monday': 'weekday', 'tuesday': 'weekday', 'wednesday': 'weekday',
+        'thursday': 'weekday', 'friday': 'weekday',
+        'saturday': 'weekend', 'sunday': 'weekend',
+        'weekday': 'weekday', 'weekdays': 'weekday',
+        'weekend': 'weekend', 'weekends': 'weekend'
+    };
+    
+    const timePatterns = [
+        { pattern: /(\d{1,2})\s*(?:am|pm)?\s*(?:to|-)\s*(\d{1,2})\s*(am|pm)?/i, extract: (m) => {
+            let start = parseInt(m[1]);
+            let end = parseInt(m[2]);
+            const pm = m[3]?.toLowerCase() === 'pm';
+            if (pm && end <= 12) end += 12;
+            if (pm && start <= 12 && start < end - 12) start += 12;
+            return { start: `${start.toString().padStart(2, '0')}:00`, end: `${end.toString().padStart(2, '0')}:00` };
+        }},
+        { pattern: /morning/i, extract: () => ({ start: '08:00', end: '12:00' }) },
+        { pattern: /afternoon/i, extract: () => ({ start: '12:00', end: '17:00' }) },
+        { pattern: /evening/i, extract: () => ({ start: '17:00', end: '21:00' }) }
+    ];
+    
+    // Find day type
+    let dayType = 'weekday';
+    for (const [word, type] of Object.entries(dayPatterns)) {
+        if (input.includes(word)) {
+            dayType = type;
+            break;
+        }
+    }
+    
+    // Find time range
+    let timeRange = null;
+    for (const { pattern, extract } of timePatterns) {
+        const match = input.match(pattern);
+        if (match) {
+            timeRange = extract(match);
+            break;
+        }
+    }
+    
+    if (!timeRange) {
+        return {
+            parsed: false,
+            message: "I couldn't understand that. Try something like 'Add weekday evenings 6-9pm' or 'Add Saturday mornings'"
+        };
+    }
+    
+    return {
+        parsed: true,
+        window: {
+            type: dayType,
+            start: timeRange.start,
+            end: timeRange.end
+        },
+        confirmation: `Add ${dayType} availability from ${timeRange.start} to ${timeRange.end}?`,
+        instruction: 'To apply this, go to "My Available Times" and add this window, then click Save.'
+    };
+}
+
+function generateNudgeMessages(context) {
+    const members = context?.members || [];
+    const groupName = context?.group?.name || 'our meeting';
+    const organiser = context?.user?.name || 'The organiser';
+    
+    // Find members who might not have set availability (no windows or empty windows)
+    const needsNudge = members.filter(m => !m.windows || m.windows.length === 0);
+    const hasResponded = members.filter(m => m.windows && m.windows.length > 0);
+    
+    if (needsNudge.length === 0) {
+        return {
+            allResponded: true,
+            message: '✅ Everyone has set their availability!'
+        };
+    }
+    
+    const nudges = needsNudge.map(member => {
+        const firstName = member.name?.split(' ')[0] || 'there';
+        return {
+            recipientName: member.name,
+            recipientEmail: member.email,
+            message: `Hi ${firstName}!
+
+Just a quick reminder about ${groupName} - we're still waiting on your availability to find a time that works for everyone.
+
+It only takes a minute: just click the link and select when you're free.
+
+${hasResponded.length} people have already responded, so we're nearly there!
+
+Thanks,
+${organiser}`
+        };
+    });
+    
+    return {
+        allResponded: false,
+        respondedCount: hasResponded.length,
+        pendingCount: needsNudge.length,
+        nudges,
+        message: `${needsNudge.length} member(s) haven't set availability yet`
+    };
+}
+
+function prepareMeetingBooking(context, slotStart, slotEnd, title) {
+    const members = context?.members || [];
+    const organiser = context?.user;
+    const group = context?.group;
+    
+    if (!slotStart) {
+        return { error: 'No time slot specified. Find a slot first using the search.' };
+    }
+    
+    const startDate = new Date(slotStart);
+    const endDate = slotEnd ? new Date(slotEnd) : new Date(startDate.getTime() + 60 * 60 * 1000);
+    
+    const attendeeEmails = members.map(m => m.email).filter(Boolean);
+    
+    const booking = {
+        title: title || group?.name || 'Team Meeting',
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        attendees: attendeeEmails,
+        attendeeNames: members.map(m => m.name),
+        localTimes: members.map(m => ({
+            name: m.name,
+            localTime: convertToLocalTime(startDate.toISOString(), m.timezone)
+        })),
+        organiser: organiser?.name,
+        willIncludeGoogleMeet: true
+    };
+    
+    return {
+        ready: true,
+        booking,
+        confirmation: `Ready to book "${booking.title}" for ${members.length} people. Click "Send Invites" in the app to confirm.`,
+        message: 'Review the details above, then use the app to send the actual invites.'
+    };
+}
+
 // Define tools using Vercel AI SDK format
 const tools = {
     analyze_timezone_overlap: tool({
@@ -630,6 +1034,85 @@ const tools = {
         description: 'Check if a specific time slot has calendar conflicts for any member. Use when discussing a particular meeting time.',
         parameters: z.object({
             timeSlot: z.string().describe('The time slot to check in ISO format (e.g., "2025-01-10T14:00:00Z")')
+        }),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    // NEW OPTIONAL TOOLS
+    
+    find_next_slot: tool({
+        description: 'Find the next available time slot that works for everyone (or the best partial match). Use when organiser asks "when can we meet?" or "find me a time".',
+        parameters: z.object({
+            daysAhead: z.number().optional().describe('How many days ahead to search (default 14)')
+        }),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    broadcast_message: tool({
+        description: 'Generate a message to send to all group members at once. Use when organiser wants to notify everyone about something.',
+        parameters: z.object({
+            messageContent: z.string().describe('The message content. Use {name} for recipient name, {timezone} for their timezone.'),
+            messageType: z.enum(['update', 'reminder', 'confirmation']).optional().describe('Type of message')
+        }),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    check_holidays: tool({
+        description: 'Check if a proposed date conflicts with public holidays in any member\'s country. Use before booking to avoid scheduling on holidays.',
+        parameters: z.object({
+            date: z.string().describe('The date to check in ISO format (e.g., "2025-01-26")')
+        }),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    suggest_fair_rotation: tool({
+        description: 'Suggest a fair rotation schedule for recurring meetings so the same people don\'t always get the inconvenient times.',
+        parameters: z.object({}),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    split_by_timezone: tool({
+        description: 'Suggest how to split a large group into smaller timezone-based subgroups for easier scheduling.',
+        parameters: z.object({}),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    parse_availability: tool({
+        description: 'Parse natural language availability input like "Add Thursday evenings 6-9pm" and return structured data.',
+        parameters: z.object({
+            input: z.string().describe('Natural language availability description')
+        }),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    send_nudge: tool({
+        description: 'Generate reminder messages for members who haven\'t set their availability yet.',
+        parameters: z.object({}),
+        execute: async () => {
+            return { needsContext: true };
+        }
+    }),
+    
+    prepare_booking: tool({
+        description: 'Prepare a meeting booking with all details ready. Returns confirmation for the organiser to review before sending.',
+        parameters: z.object({
+            slotStart: z.string().describe('Start time in ISO format'),
+            slotEnd: z.string().optional().describe('End time in ISO format (defaults to 1 hour after start)'),
+            title: z.string().optional().describe('Meeting title (defaults to group name)')
         }),
         execute: async () => {
             return { needsContext: true };
@@ -727,7 +1210,7 @@ export default async function handler(req, res) {
         // Select model - Claude 4.5 Haiku preferred (fast, cheap, reliable), Gemini fallback
         const getModel = () => {
             if (useClaudde) {
-                return anthropic('claude-haiku-4-5-20250929'); // Claude 4.5 Haiku - fastest, cheapest
+                return anthropic('claude-haiku-4.5'); // Claude 4.5 Haiku - fastest, cheapest
             }
             return google('gemini-2.0-flash-001', { apiKey: geminiKey }); // Stable Gemini fallback
         };
@@ -796,6 +1279,51 @@ export default async function handler(req, res) {
                                     } else {
                                         toolResult = checkCalendarConflicts(context, args.timeSlot);
                                     }
+                                    break;
+                                    
+                                // NEW OPTIONAL TOOLS
+                                case 'find_next_slot':
+                                    toolResult = findNextSlot(context, args.daysAhead);
+                                    break;
+                                    
+                                case 'broadcast_message':
+                                    if (!args.messageContent) {
+                                        toolResult = { error: 'Message content required' };
+                                    } else {
+                                        toolResult = broadcastMessage(context, args.messageContent, args.messageType);
+                                    }
+                                    break;
+                                    
+                                case 'check_holidays':
+                                    if (!args.date) {
+                                        toolResult = { error: 'Date required' };
+                                    } else {
+                                        toolResult = checkHolidays(context, args.date);
+                                    }
+                                    break;
+                                    
+                                case 'suggest_fair_rotation':
+                                    toolResult = suggestFairRotation(context);
+                                    break;
+                                    
+                                case 'split_by_timezone':
+                                    toolResult = splitByTimezone(context);
+                                    break;
+                                    
+                                case 'parse_availability':
+                                    if (!args.input) {
+                                        toolResult = { error: 'Input text required' };
+                                    } else {
+                                        toolResult = parseAvailabilityUpdate(args.input);
+                                    }
+                                    break;
+                                    
+                                case 'send_nudge':
+                                    toolResult = generateNudgeMessages(context);
+                                    break;
+                                    
+                                case 'prepare_booking':
+                                    toolResult = prepareMeetingBooking(context, args.slotStart, args.slotEnd, args.title);
                                     break;
                             }
                             
