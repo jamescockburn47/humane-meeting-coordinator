@@ -180,26 +180,33 @@ export default async function handler(req, res) {
         }));
 
         // Use Vercel AI SDK with Google provider
+        // Model options: gemini-1.5-flash (fast), gemini-1.5-pro (more capable)
         const { text } = await generateText({
-            model: google('gemini-2.0-flash', { apiKey }),
+            model: google('gemini-1.5-flash', { apiKey }),
             system: systemPrompt,
             messages: conversationMessages,
         });
 
         return res.status(200).json({ response: text });
     } catch (error) {
-        console.error("Chat API error:", error.message);
+        console.error("Chat API error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
         
         // Provide more specific error messages
-        if (error.message?.includes('API key')) {
-            return res.status(500).json({ error: "Invalid API key" });
+        const errorMessage = error.message || String(error);
+        
+        if (errorMessage.includes('API key') || errorMessage.includes('API_KEY')) {
+            return res.status(500).json({ error: "Invalid API key. Check GOOGLE_GENERATIVE_AI_API_KEY in Vercel." });
         }
-        if (error.message?.includes('quota')) {
-            return res.status(429).json({ error: "API quota exceeded" });
+        if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+            return res.status(429).json({ error: "API quota exceeded. Try again later." });
+        }
+        if (errorMessage.includes('model') || errorMessage.includes('not found')) {
+            return res.status(500).json({ error: "Model not available. Contact support." });
         }
         
         return res.status(500).json({
-            error: error.message || "Unknown error occurred"
+            error: errorMessage || "Unknown error occurred"
         });
     }
 }
