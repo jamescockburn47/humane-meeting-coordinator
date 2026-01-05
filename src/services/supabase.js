@@ -90,6 +90,30 @@ export async function createGroup(name, creatorEmail) {
 }
 
 /**
+ * Updates group meeting request settings (date range, duration).
+ * These persist so users see the same settings when they return.
+ */
+export async function updateGroupMeetingSettings(groupId, settings) {
+    const { data, error } = await supabase
+        .from('groups')
+        .update({
+            meeting_date_from: settings.dateFrom,
+            meeting_date_to: settings.dateTo,
+            meeting_duration: settings.duration,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', groupId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Failed to update group settings:", error);
+        return null;
+    }
+    return data;
+}
+
+/**
  * Gets a group by its short invite code OR UUID (for backwards compatibility)
  */
 export async function getGroupByInviteCode(inviteCode) {

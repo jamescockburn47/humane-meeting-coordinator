@@ -18,6 +18,7 @@ CREATE TABLE profiles (
   humane_start_local TEXT DEFAULT '09:00',
   humane_end_local TEXT DEFAULT '17:00',
   humane_windows JSONB DEFAULT '[]'::jsonb,
+  night_owl BOOLEAN DEFAULT FALSE,  -- Allows midnight-6am slots if true
   last_synced_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -36,11 +37,17 @@ CREATE TABLE groups (
   created_by TEXT REFERENCES profiles(email) ON DELETE SET NULL,
   -- Short 6-char invite code: use uppercase alphanumeric (no confusing chars)
   invite_code TEXT UNIQUE DEFAULT UPPER(substr(md5(random()::text), 0, 7)),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  -- Persisted meeting search settings
+  meeting_date_from DATE,
+  meeting_date_to DATE,
+  meeting_duration INTEGER DEFAULT 60,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index for fast invite code lookups
+-- Indexes for fast lookups
 CREATE INDEX idx_groups_invite_code ON groups(invite_code);
+CREATE INDEX idx_groups_created_by ON groups(created_by);
 
 -- Ensure invite codes are always uppercase for consistency
 CREATE OR REPLACE FUNCTION normalize_invite_code()

@@ -4,7 +4,7 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
     const content = (
         <>
             <div className="privacy-header">
-                    <span className="privacy-shield">🛡️</span>
+                    <span className="privacy-shield"></span>
                     <h2>Privacy & Data Protection</h2>
                 </div>
 
@@ -17,28 +17,28 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
                     <h3>📊 What We Collect</h3>
                     <div className="data-table">
                         <div className="data-row collected">
-                            <span className="data-icon">✓</span>
+                            <span className="data-icon">•</span>
                             <div>
                                 <strong>Busy/Free Time Slots</strong>
                                 <p>Only the start and end times when you're busy. Example: "Busy 9:00-10:00 AM"</p>
                             </div>
                         </div>
                         <div className="data-row collected">
-                            <span className="data-icon">✓</span>
+                            <span className="data-icon">•</span>
                             <div>
                                 <strong>Email Address</strong>
                                 <p>Used to identify you within groups and send calendar invites.</p>
                             </div>
                         </div>
                         <div className="data-row collected">
-                            <span className="data-icon">✓</span>
+                            <span className="data-icon">•</span>
                             <div>
                                 <strong>Display Name & Timezone</strong>
                                 <p>So group members can identify you and we can show times correctly.</p>
                             </div>
                         </div>
                         <div className="data-row collected">
-                            <span className="data-icon">✓</span>
+                            <span className="data-icon">•</span>
                             <div>
                                 <strong>Availability Preferences</strong>
                                 <p>Your "Humane Hours" windows (e.g., "9 AM - 5 PM weekdays").</p>
@@ -113,7 +113,7 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
                 </div>
 
                 <div className="privacy-section">
-                    <h3>⏱️ Data Retention</h3>
+                    <h3>Data Retention</h3>
                     <ul className="retention-list">
                         <li><strong>Availability Cache:</strong> Automatically deleted after 30 days</li>
                         <li><strong>Profile Data:</strong> Retained until you delete your account</li>
@@ -135,7 +135,7 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
 
                 {userEmail && (
                     <div className="privacy-actions">
-                        <h3>🗑️ Delete My Data</h3>
+                        <h3>Delete My Data</h3>
                         <p>
                             This will permanently remove your profile, availability data, and group memberships. 
                             This action cannot be undone.

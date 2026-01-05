@@ -239,13 +239,12 @@ export function JoinGroupPage({
                     {(meetingRequest.from || meetingRequest.to || meetingRequest.duration) && (
                         <div className="meeting-request-info">
                             <div className="request-header">
-                                <span className="request-icon">📆</span>
                                 <span>Looking to schedule:</span>
                             </div>
                             <div className="request-details">
                                 {meetingRequest.duration && (
                                     <span className="request-item">
-                                        ⏱️ {meetingRequest.duration} minute meeting
+                                        {meetingRequest.duration} minute meeting
                                     </span>
                                 )}
                                 {meetingRequest.from && meetingRequest.to && (
@@ -257,14 +256,14 @@ export function JoinGroupPage({
                                 )}
                             </div>
                             <p className="request-hint">
-                                Set your availability below so we can find a time that works for everyone!
+                                Tell us when you're available and we'll find a time that works for everyone.
                             </p>
                         </div>
                     )}
                     
                     {isExistingMember && (
                         <div className="member-status">
-                            ✓ You're already a member of this group
+                            You're already a member of this group
                         </div>
                     )}
                     {members.length > 0 && !isExistingMember && (
@@ -294,7 +293,7 @@ export function JoinGroupPage({
                             className="btn-secondary btn-large" 
                             onClick={() => setShowUpdateSettings(true)}
                         >
-                            ⚙️ Update My Availability
+                            Update My Availability
                         </button>
                     </div>
                 ) : isExistingMember && showUpdateSettings ? (
@@ -401,7 +400,7 @@ export function JoinGroupPage({
                             onClick={handleJoinAsUser}
                             disabled={joining}
                         >
-                            {joining ? 'Joining...' : '✓ Join This Group'}
+                            {joining ? 'Joining...' : 'Join This Group'}
                         </button>
                         <button className="btn-ghost" onClick={onClose}>Cancel</button>
                     </div>

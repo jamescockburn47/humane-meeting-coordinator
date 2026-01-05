@@ -301,7 +301,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         if (!supabaseUrl || !supabaseKey) {
             addLog('WARNING: Supabase environment variables not set!', 'error');
         } else {
-            addLog('Supabase env vars configured ✓', 'success');
+            addLog('Supabase env vars configured', 'success');
         }
 
         // Check if we're on the right domain
@@ -311,7 +311,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         if (currentOrigin.includes('localhost')) {
             addLog('Running in development mode', 'info');
         } else if (currentOrigin.includes('humanecalendar.com')) {
-            addLog('Running in production mode ✓', 'success');
+            addLog('Running in production mode', 'success');
         }
     };
 
@@ -351,7 +351,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                     <button className="modal-close" onClick={onClose}>×</button>
                     
                     <div className="admin-login-header">
-                        <span className="admin-lock-icon">🔒</span>
+                        <span className="admin-lock-icon"></span>
                         <h2>Admin Access</h2>
                     </div>
 
@@ -445,7 +445,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                         <div className="status-card">
                             <div className="status-header">
                                 <span>Environment</span>
-                                <span>ℹ️</span>
+                                <span></span>
                             </div>
                             <div className="status-details">
                                 <span>Origin: {window.location.origin}</span>

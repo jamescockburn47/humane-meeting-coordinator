@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BookingModal } from './BookingModal';
 import { SmartSuggestions } from './SmartSuggestions';
-import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup } from '../services/supabase';
+import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup, updateGroupMeetingSettings } from '../services/supabase';
 
 // Invite Link Card Component - Focused on sharing links with optional date range
 function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, duration }) {
@@ -57,7 +57,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, du
                     text: `Join my Humane Calendar group to find a meeting time!`,
                     url: inviteUrl
                 });
-            } catch (e) {
+            } catch {
                 // User cancelled or error
                 handleCopy();
             }
@@ -78,7 +78,7 @@ function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, du
             {/* Show date range info if set */}
             {startDate && endDate && (
                 <div className="invite-date-range">
-                    <span className="date-range-label">📆 Looking for availability:</span>
+                    <span className="date-range-label">Looking for availability:</span>
                     <span className="date-range-value">
                         {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} 
                         {' → '}
@@ -177,28 +177,65 @@ function SlotCard({ slot, onClick, members, showPartial = false }) {
 }
 
 export function GroupView({ group, currentUser, onFindTimes, suggestions, loading, onBack, onBook, onDeleteGroup, onMembersLoaded, onOpenAssistant }) {
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]);
-    const [duration, setDuration] = useState(60); // Default 60 minutes
+    // Meeting search settings - loaded from group, with fallback to defaults
+    const getDefaultStartDate = () => new Date().toISOString().split('T')[0];
+    const getDefaultEndDate = () => new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0];
+    
+    const [startDate, setStartDate] = useState(group.meeting_date_from || getDefaultStartDate());
+    const [endDate, setEndDate] = useState(group.meeting_date_to || getDefaultEndDate());
+    const [duration, setDuration] = useState(group.meeting_duration || 60);
     const [bookingSlot, setBookingSlot] = useState(null);
     const [bookingProcessing, setBookingProcessing] = useState(false);
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
 
     // Admin State
     const [members, setMembers] = useState([]);
     const [fullGroupDetails, setFullGroupDetails] = useState(group);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    // Load group data and saved meeting settings
     useEffect(() => {
+        const loadData = async () => {
+            const mems = await getGroupMembers(group.id);
+            setMembers(mems);
+            if (onMembersLoaded) onMembersLoaded(mems);
+            const details = await getGroupDetails(group.id);
+            if (details) {
+                setFullGroupDetails(details);
+                // Load saved meeting settings if they exist (only on first load)
+                if (!settingsLoaded) {
+                    if (details.meeting_date_from) setStartDate(details.meeting_date_from);
+                    if (details.meeting_date_to) setEndDate(details.meeting_date_to);
+                    if (details.meeting_duration) setDuration(details.meeting_duration);
+                    setSettingsLoaded(true);
+                }
+            }
+        };
         loadData();
-    }, [group.id, refreshTrigger]);
+    }, [group.id, refreshTrigger, settingsLoaded, onMembersLoaded]);
 
-    const loadData = async () => {
-        const mems = await getGroupMembers(group.id);
-        setMembers(mems);
-        if (onMembersLoaded) onMembersLoaded(mems);
-        const details = await getGroupDetails(group.id);
-        if (details) setFullGroupDetails(details);
-    };
+    // Save meeting settings when they change (debounced)
+    const saveMeetingSettings = useCallback(async (newStartDate, newEndDate, newDuration) => {
+        // Only save if we're the creator
+        if (fullGroupDetails?.created_by !== currentUser?.username) return;
+        
+        await updateGroupMeetingSettings(group.id, {
+            dateFrom: newStartDate,
+            dateTo: newEndDate,
+            duration: newDuration
+        });
+    }, [group.id, fullGroupDetails?.created_by, currentUser?.username]);
+
+    // Auto-save settings when changed
+    useEffect(() => {
+        if (!settingsLoaded) return; // Don't save on initial load
+        
+        const timer = setTimeout(() => {
+            saveMeetingSettings(startDate, endDate, duration);
+        }, 1000); // Debounce 1 second
+        
+        return () => clearTimeout(timer);
+    }, [startDate, endDate, duration, settingsLoaded, saveMeetingSettings]);
 
     const handleRemove = async (email) => {
         if (!confirm(`Are you sure you want to remove ${email}?`)) return;
@@ -268,7 +305,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                         className="btn-danger"
                         title="Delete this group"
                     >
-                        🗑️ Delete Group
+                        Delete Group
                     </button>
                 )}
             </div>

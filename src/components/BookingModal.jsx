@@ -147,7 +147,7 @@ export function BookingModal({ slot, members, onConfirm, onCancel, processing, h
                     </div>
 
                     <div className="booking-info-box">
-                        <div className="info-icon">✉️</div>
+                        <div className="info-icon"></div>
                         <div className="info-text">
                             <strong>What happens next:</strong>
                             <p>
