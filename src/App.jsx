@@ -909,7 +909,15 @@ function App() {
               </div>
             )}
 
-            <h2>{activeAccount ? 'Dashboard' : ''}</h2>
+            {/* Dashboard header with story link for logged-in users */}
+            <div className="dashboard-header">
+              <h2>{activeAccount ? 'Dashboard' : ''}</h2>
+              {activeAccount && (
+                <a href="/story" className="story-link-compact">
+                  <span className="vibe-icon">⚡</span> Read the story
+                </a>
+              )}
+            </div>
 
             <div className="grid-cols-2" style={{ marginBottom: '2rem' }}>
               <div className="card">

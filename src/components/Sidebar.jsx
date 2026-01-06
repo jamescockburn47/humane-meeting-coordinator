@@ -161,8 +161,8 @@ export function Sidebar({
                         <div className="beta-notice">
                             <div className="beta-badge">CLOSED BETA</div>
                             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.5rem 0', lineHeight: 1.4 }}>
-                                Google: Limited to 100 users during verification.<br/>
-                                Microsoft: Use personal accounts only (work accounts may be blocked).
+                                Limited to 100 Google + 100 Microsoft users.<br/>
+                                Microsoft: Personal accounts only (work accounts may be blocked).
                             </p>
                         </div>
 
