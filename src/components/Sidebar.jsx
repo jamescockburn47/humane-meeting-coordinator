@@ -217,16 +217,19 @@ export function Sidebar({
                             </p>
                         </div>
 
-                        {hasBetaAccess ? (
-                            <>
-                                <button onClick={onLoginMS} className="btn-login btn-microsoft">
-                                    Sign in with Microsoft
-                                </button>
-                                <button onClick={onLoginGoogle} className="btn-login btn-google">
-                                    Sign in with Google
-                                </button>
-                            </>
-                        ) : requestStatus === 'sent' ? (
+                        {/* Always show login buttons - approval check happens after login in App.jsx */}
+                        <button onClick={onLoginMS} className="btn-login btn-microsoft">
+                            Sign in with Microsoft
+                        </button>
+                        <button onClick={onLoginGoogle} className="btn-login btn-google">
+                            Sign in with Google
+                        </button>
+                        
+                        <div className="divider-text" style={{ margin: '0.5rem 0' }}>
+                            <span>new user?</span>
+                        </div>
+                        
+                        {requestStatus === 'sent' ? (
                             <div className="beta-request-sent">
                                 <div className="sent-icon">✓</div>
                                 <p className="sent-title">Request Submitted!</p>
