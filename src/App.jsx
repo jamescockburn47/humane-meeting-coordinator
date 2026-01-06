@@ -723,7 +723,22 @@ function App() {
       setSuggestions([]);
     } catch (e) {
       console.error("Booking error:", e);
-      alert("Booking Failed: " + e.message);
+      
+      // Handle specific error types with user-friendly messages
+      if (e.code === 401 || e.message === 'SESSION_EXPIRED') {
+        const relogin = confirm(
+          "Your session has expired.\n\n" +
+          "Google access tokens expire after about 1 hour.\n\n" +
+          "Would you like to log out now? You can then log back in and try booking again."
+        );
+        if (relogin) {
+          handleLogout();
+        }
+      } else if (e.userMessage) {
+        alert(e.userMessage);
+      } else {
+        alert("Booking Failed: " + e.message);
+      }
       throw e;
     }
   };

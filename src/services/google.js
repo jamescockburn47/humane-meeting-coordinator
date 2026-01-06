@@ -116,11 +116,34 @@ export async function createGoogleEvent(accessToken, subject, description, start
     if (!response.ok) {
         const errorText = await response.text();
         console.error("Google Event Creation Failed:", errorText);
-        console.error("This usually means:");
-        console.error("  1. Your Google OAuth token expired - try logging out and back in");
-        console.error("  2. Calendar API is not enabled in Google Cloud Console");
-        console.error("  3. Missing calendar.events.owned scope");
-        throw new Error("Failed to create Google Event: " + errorText);
+        
+        // Parse the error to give user-friendly messages
+        let errorData;
+        try {
+            errorData = JSON.parse(errorText);
+        } catch {
+            errorData = { error: { code: response.status, message: errorText } };
+        }
+        
+        const errorCode = errorData?.error?.code || response.status;
+        
+        if (errorCode === 401) {
+            // Token expired - this is the most common issue
+            const error = new Error("SESSION_EXPIRED");
+            error.code = 401;
+            error.userMessage = "Your Google session has expired. Please log out and log back in to book meetings.";
+            throw error;
+        } else if (errorCode === 403) {
+            const error = new Error("PERMISSION_DENIED");
+            error.code = 403;
+            error.userMessage = "Calendar permission denied. Please log out, log back in, and make sure you allow calendar access.";
+            throw error;
+        } else {
+            const error = new Error("CALENDAR_ERROR");
+            error.code = errorCode;
+            error.userMessage = `Calendar error: ${errorData?.error?.message || 'Unknown error'}`;
+            throw error;
+        }
     }
 
     const result = await response.json();
