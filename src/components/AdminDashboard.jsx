@@ -220,6 +220,11 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                 
                 const userData = { ...p, provider };
                 
+                // Debug: log first few users
+                if (googleUsers.length + microsoftUsers.length + guestUsers.length < 3) {
+                    console.log('Categorizing user:', { email, provider, is_approved: p.is_approved, requested_provider: p.requested_provider });
+                }
+                
                 if (provider === 'google') {
                     googleUsers.push(userData);
                 } else if (provider === 'microsoft') {
@@ -229,9 +234,16 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                 }
                 
                 // Track pending users separately (null, undefined, or missing = pending)
-                if (p.is_approved === null || p.is_approved === undefined) {
+                if (p.is_approved == null) { // == catches both null and undefined
                     pending.push(userData);
                 }
+            });
+            
+            console.log('Categorization results:', {
+                google: googleUsers.length,
+                microsoft: microsoftUsers.length,
+                guest: guestUsers.length,
+                pending: pending.length
             });
 
             setBetaStats({
