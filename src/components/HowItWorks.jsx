@@ -5,156 +5,214 @@ export function HowItWorks({ isStandalone = false, onClose }) {
         <>
             <div className="how-header">
                 <h2>How Humane Calendar Works</h2>
+                <p className="how-tagline">
+                    Calendly fills your calendar. <strong>We protect your energy.</strong>
+                </p>
             </div>
 
             <p className="how-intro">
-                <strong>Scheduling for global teams and side projects.</strong>
+                Most scheduling tools ask: <em>"Is this slot empty?"</em>
                 <br /><br />
-                Each person picks the times that work for them — in their own timezone. 
-                You see where everyone overlaps, then send the invite.
+                We ask: <strong>"Is this slot healthy?"</strong>
+                <br /><br />
+                Even if your calendar shows "free" at 6 AM or 10 PM, that doesn't mean you 
+                should take a meeting then. Humane Calendar respects sleep cycles, work-life 
+                boundaries, and timezone differences — so you can schedule like a human, not a machine.
             </p>
 
-            {/* The Problem */}
-            <div className="how-section problem-section">
-                <h3>The Problem with Other Tools</h3>
-                <div className="problem-grid">
-                    <div className="problem-item">
-                        <strong>Calendly / Doodle</strong>
-                        <p>Host guesses a few times. Invitees vote. Often none work.</p>
-                    </div>
-                    <div className="problem-item">
-                        <strong>Reclaim / Clockwise</strong>
-                        <p>Scans your calendar. Assumes empty = available. Books 6 AM calls.</p>
-                    </div>
-                    <div className="problem-item">
-                        <strong>When2Meet</strong>
-                        <p>Everyone paints their slots. But then you're stuck with manual booking.</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Step 1 */}
-            <div className="how-section">
-                <div className="step-number">1</div>
-                <div className="step-content">
-                    <h3>Each Person Picks Their Own Slots</h3>
-                    <p>
-                        You send a link. Each invitee defines when they're genuinely available — 
-                        <strong> in their own timezone</strong>.
-                    </p>
-                    <p>
-                        Early morning before the family wakes up? Mark it. 
-                        Evenings off-limits? Leave it blank. 
-                        Different hours on different days? Set multiple windows.
-                    </p>
-                    <div className="step-note highlight">
-                        No one is forced into a slot they didn't offer.
-                    </div>
-                </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="how-section">
-                <div className="step-number">2</div>
-                <div className="step-content">
-                    <h3>With or Without Calendar Access</h3>
-                    <p>Invitees choose how to participate:</p>
-                    <div className="mode-cards">
-                        <div className="mode-card guest">
-                            <h4>Guest Mode</h4>
-                            <p>No login. Just select the times you're free.</p>
-                            <span className="mode-tag">Zero data access</span>
-                        </div>
-                        <div className="mode-card calendar">
-                            <h4>Calendar Mode</h4>
-                            <p>Connect to see your busy times. You still choose which slots to offer.</p>
-                            <span className="mode-tag">Free/Busy only</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="how-section">
-                <div className="step-number">3</div>
-                <div className="step-content">
-                    <h3>See the Overlap. Send the Invite.</h3>
-                    <p>
-                        Once everyone has submitted their availability, you see where the schedules align.
-                        Pick a slot, add a title, and send — a calendar invite goes out to everyone with 
-                        a Google Meet or Teams link included.
-                    </p>
-                    <div className="auto-magic-list">
-                        <div className="magic-item">
-                            <span>Calendar invite sent from your account</span>
-                        </div>
-                        <div className="magic-item">
-                            <span>Video link auto-generated</span>
-                        </div>
-                        <div className="magic-item">
-                            <span>Times shown in each person's local timezone</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Who Needs to Login */}
-            <div className="how-section highlight-section">
-                <h3>Who Needs to Log In?</h3>
-                <div className="login-requirements">
-                    <div className="login-card host">
-                        <div className="login-header">
-                            <strong>The Host</strong>
-                        </div>
-                        <p>Logs in with Google or Microsoft to:</p>
+            {/* Why Not Calendly */}
+            <div className="how-section calendly-compare">
+                <h3>Why Teams Are Switching from Calendly</h3>
+                
+                <div className="compare-cards">
+                    <div className="compare-card old-way">
+                        <div className="compare-label">The Calendly Way</div>
                         <ul>
-                            <li>Create the calendar event</li>
-                            <li>Generate the video link</li>
-                            <li>Send invites from their account</li>
+                            <li>You send a link and say "you figure it out"</li>
+                            <li>Burden on the guest to find a good time</li>
+                            <li>Group meetings require voting polls</li>
+                            <li>Empty slot = available (even 6 AM)</li>
+                            <li>Feels like a gatekeeper</li>
                         </ul>
                     </div>
-                    <div className="login-card guest">
-                        <div className="login-header">
-                            <strong>Invitees</strong>
-                        </div>
-                        <p>Can participate with no account:</p>
+                    
+                    <div className="compare-card new-way">
+                        <div className="compare-label">The Humane Way</div>
                         <ul>
-                            <li>Click the invite link</li>
-                            <li>Select available times</li>
-                            <li>Done</li>
+                            <li>AI analyzes everyone's wellness windows</li>
+                            <li>You show leadership by finding the best time</li>
+                            <li>Group overlap calculated instantly — no polls</li>
+                            <li>Flags times that damage sleep or balance</li>
+                            <li>Guests join with zero friction</li>
                         </ul>
                     </div>
                 </div>
             </div>
 
-            {/* Comparison */}
+            {/* Core Principles */}
+            <div className="how-section principles">
+                <h3>Four Things We Do Differently</h3>
+                
+                <div className="principle-grid">
+                    <div className="principle-card">
+                        <div className="principle-num">1</div>
+                        <h4>Wellness, Not Just Availability</h4>
+                        <p>
+                            Other tools treat you like a machine. If you're technically free at 9 PM, 
+                            they offer that slot. We flag and penalize times that ruin sleep or work-life 
+                            balance — even if the calendar is "free."
+                        </p>
+                    </div>
+                    
+                    <div className="principle-card">
+                        <div className="principle-num">2</div>
+                        <h4>Decision, Not Transaction</h4>
+                        <p>
+                            Calendly is passive — you send a link and hope for the best. 
+                            We give you AI to say: "I've analyzed our time zones. This is the 
+                            best time for us to meet." It shows leadership and care.
+                        </p>
+                    </div>
+                    
+                    <div className="principle-card">
+                        <div className="principle-num">3</div>
+                        <h4>Group Scheduling Without Polls</h4>
+                        <p>
+                            Five-person meetings on Calendly require a voting poll where everyone 
+                            picks manually. Our AI reads the data and finds the overlap instantly. 
+                            No voting, no democracy — just the right answer.
+                        </p>
+                    </div>
+                    
+                    <div className="principle-card">
+                        <div className="principle-num">4</div>
+                        <h4>Frictionless Guest Mode</h4>
+                        <p>
+                            Guests can accept an invite without creating an account (zero friction) 
+                            OR connect their calendar for AI optimization (high value). 
+                            We meet the user where they are.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* How It Works Steps */}
             <div className="how-section">
-                <h3>What Makes This Different</h3>
-                <div className="comparison-table">
+                <h3>The Three-Step Flow</h3>
+                
+                <div className="flow-steps">
+                    <div className="flow-step">
+                        <div className="step-number">1</div>
+                        <div className="step-content">
+                            <h4>Everyone Sets Their "Green Zones"</h4>
+                            <p>
+                                You send a link. Each person defines when they're genuinely available — 
+                                <strong> in their own timezone</strong>.
+                            </p>
+                            <p className="step-detail">
+                                Early morning before the family wakes up? Mark it. 
+                                Evenings off-limits? Leave it blank. 
+                                No one is forced into a slot they didn't offer.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flow-step">
+                        <div className="step-number">2</div>
+                        <div className="step-content">
+                            <h4>AI Finds the Overlap</h4>
+                            <p>
+                                Our algorithm analyzes everyone's availability and timezone, 
+                                then highlights times that work for all — with fairness scoring 
+                                so the same people don't always get the bad slots.
+                            </p>
+                            <p className="step-detail">
+                                If there's no perfect time, the AI explains why and suggests 
+                                what each person could change to make it work.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flow-step">
+                        <div className="step-number">3</div>
+                        <div className="step-content">
+                            <h4>One-Click Booking</h4>
+                            <p>
+                                Pick a slot, add a title, and send. A calendar invite goes out 
+                                to everyone — with a Google Meet or Teams link included.
+                            </p>
+                            <div className="auto-magic-list">
+                                <div className="magic-item">Calendar invite sent from your account</div>
+                                <div className="magic-item">Video link auto-generated</div>
+                                <div className="magic-item">Times shown in each person's local timezone</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Guest vs Calendar Mode */}
+            <div className="how-section">
+                <h3>Two Ways to Participate</h3>
+                <div className="mode-cards">
+                    <div className="mode-card guest">
+                        <h4>Guest Mode</h4>
+                        <p>No login required. Just click the times you're free.</p>
+                        <span className="mode-tag">Zero data access</span>
+                    </div>
+                    <div className="mode-card calendar">
+                        <h4>Calendar Mode</h4>
+                        <p>Connect to overlay your "Free/Busy" status. You still choose which slots to offer.</p>
+                        <span className="mode-tag">See conflicts automatically</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Comparison Table */}
+            <div className="how-section">
+                <h3>How We Compare</h3>
+                <div className="comparison-table-v2">
                     <div className="comp-row header">
-                        <div className="comp-tool">Tool</div>
-                        <div className="comp-approach">Invitees pick slots?</div>
-                        <div className="comp-problem">Sends invite?</div>
+                        <div className="comp-cell"></div>
+                        <div className="comp-cell">Invitees pick slots</div>
+                        <div className="comp-cell">No voting required</div>
+                        <div className="comp-cell">Sends invite</div>
+                        <div className="comp-cell">Wellness-aware</div>
                     </div>
                     <div className="comp-row">
-                        <div className="comp-tool">Doodle / Rallly</div>
-                        <div className="comp-approach">No — host picks options</div>
-                        <div className="comp-problem">No</div>
+                        <div className="comp-cell tool">Calendly</div>
+                        <div className="comp-cell no">✗</div>
+                        <div className="comp-cell no">✗</div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell no">✗</div>
                     </div>
                     <div className="comp-row">
-                        <div className="comp-tool">Reclaim / Clockwise</div>
-                        <div className="comp-approach">No — algorithm decides</div>
-                        <div className="comp-problem">Yes</div>
+                        <div className="comp-cell tool">Doodle</div>
+                        <div className="comp-cell no">✗</div>
+                        <div className="comp-cell no">✗</div>
+                        <div className="comp-cell no">✗</div>
+                        <div className="comp-cell no">✗</div>
                     </div>
                     <div className="comp-row">
-                        <div className="comp-tool">When2Meet</div>
-                        <div className="comp-approach">Yes</div>
-                        <div className="comp-problem">No</div>
+                        <div className="comp-cell tool">When2Meet</div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell no">✗</div>
+                        <div className="comp-cell no">✗</div>
+                    </div>
+                    <div className="comp-row">
+                        <div className="comp-cell tool">Reclaim</div>
+                        <div className="comp-cell no">✗</div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell no">✗</div>
                     </div>
                     <div className="comp-row featured">
-                        <div className="comp-tool"><strong>Humane Calendar</strong></div>
-                        <div className="comp-approach"><strong>Yes</strong></div>
-                        <div className="comp-problem"><strong>Yes</strong></div>
+                        <div className="comp-cell tool"><strong>Humane Calendar</strong></div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell yes">✓</div>
+                        <div className="comp-cell yes">✓</div>
                     </div>
                 </div>
             </div>
@@ -184,7 +242,7 @@ export function HowItWorks({ isStandalone = false, onClose }) {
 
             {/* Privacy */}
             <div className="how-section">
-                <h3>Privacy</h3>
+                <h3>Privacy by Design</h3>
                 <p className="privacy-subtitle">
                     We know this might sit alongside your day job calendar. That's why:
                 </p>
@@ -222,7 +280,7 @@ export function HowItWorks({ isStandalone = false, onClose }) {
 
             {/* CTA */}
             <div className="how-cta">
-                <h3>Ready to try it?</h3>
+                <h3>Ready to schedule like a human?</h3>
                 <p className="cta-tagline">Free for individuals and small teams.</p>
                 <a href="/" className="btn-primary btn-large">Get Started</a>
             </div>
