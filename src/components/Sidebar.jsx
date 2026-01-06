@@ -75,7 +75,7 @@ export function Sidebar({
         setBetaError('');
         
         try {
-            // Create a pending profile (is_approved = null means pending)
+            // Create a pending profile - EXPLICITLY set is_approved to null (pending)
             const { error } = await supabase
                 .from('profiles')
                 .upsert({
@@ -85,8 +85,8 @@ export function Sidebar({
                     humane_start_local: '09:00',
                     humane_end_local: '17:00',
                     humane_windows: [{ start: '09:00', end: '17:00', type: 'weekday' }],
-                    requested_provider: requestForm.provider, // Track which provider they want
-                    // is_approved defaults to NULL in DB (pending)
+                    requested_provider: requestForm.provider,
+                    is_approved: null, // EXPLICITLY set to null = pending approval
                 }, { onConflict: 'email' });
             
             if (error) throw error;
