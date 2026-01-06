@@ -103,6 +103,8 @@ body {
   padding: 2rem 1.5rem;
   gap: 3rem;
   flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 100vh;
 }
 
 .brand {
