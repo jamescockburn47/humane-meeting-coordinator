@@ -26,7 +26,7 @@ export function Sidebar({
     const [betaError, setBetaError] = useState('');
     const [showRequestForm, setShowRequestForm] = useState(false);
     const [showCodeInput, setShowCodeInput] = useState(false);
-    const [requestForm, setRequestForm] = useState({ name: '', email: '', reason: '' });
+    const [requestForm, setRequestForm] = useState({ name: '', email: '', reason: '', provider: '' });
     const [requestStatus, setRequestStatus] = useState(null); // 'sending', 'sent', 'error'
 
     // Check localStorage for existing beta access OR existing user session
@@ -68,6 +68,11 @@ export function Sidebar({
             return;
         }
         
+        if (!requestForm.provider) {
+            setBetaError('Please select Google or Microsoft');
+            return;
+        }
+        
         setRequestStatus('sending');
         setBetaError('');
         
@@ -82,6 +87,7 @@ export function Sidebar({
                     humane_start_local: '09:00',
                     humane_end_local: '17:00',
                     humane_windows: [{ start: '09:00', end: '17:00', type: 'weekday' }],
+                    requested_provider: requestForm.provider, // Track which provider they want
                     // is_approved defaults to NULL in DB (pending)
                 }, { onConflict: 'email' });
             
@@ -247,6 +253,29 @@ export function Sidebar({
                                     onChange={(e) => setRequestForm({ ...requestForm, email: e.target.value })}
                                     className="beta-input"
                                 />
+                                <div className="provider-select">
+                                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem', display: 'block' }}>
+                                        Which calendar will you use?
+                                    </label>
+                                    <div className="provider-buttons">
+                                        <button
+                                            type="button"
+                                            className={`provider-btn ${requestForm.provider === 'google' ? 'selected' : ''}`}
+                                            onClick={() => setRequestForm({ ...requestForm, provider: 'google' })}
+                                        >
+                                            <span className="provider-icon">G</span>
+                                            Google
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`provider-btn ${requestForm.provider === 'microsoft' ? 'selected' : ''}`}
+                                            onClick={() => setRequestForm({ ...requestForm, provider: 'microsoft' })}
+                                        >
+                                            <span className="provider-icon">M</span>
+                                            Microsoft
+                                        </button>
+                                    </div>
+                                </div>
                                 <textarea
                                     placeholder="How will you use Humane Calendar? (optional)"
                                     value={requestForm.reason}

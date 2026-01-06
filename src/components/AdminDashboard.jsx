@@ -203,15 +203,15 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         addLog('Fetching beta tester statistics...', 'info');
         
         try {
-            // Get all profiles with their info including approval status
+            // Get all profiles with their info including approval status and requested provider
             const { data: profiles, error } = await supabase
                 .from('profiles')
-                .select('email, display_name, timezone, created_at, is_approved, approved_at, approved_by')
+                .select('email, display_name, timezone, created_at, is_approved, approved_at, approved_by, requested_provider')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            // Categorize by provider (infer from email domain)
+            // Categorize by provider - use requested_provider if set, otherwise infer from email
             const googleUsers = [];
             const microsoftUsers = [];
             const guestUsers = [];
@@ -219,15 +219,21 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
 
             profiles.forEach(p => {
                 const email = p.email?.toLowerCase() || '';
-                const isGoogle = email.includes('@gmail.com') || email.includes('@googlemail.com');
-                const isMicrosoft = email.includes('@outlook.') || email.includes('@hotmail.') || 
-                                    email.includes('@live.') || email.includes('@msn.');
                 
-                const userData = { ...p, provider: isGoogle ? 'google' : isMicrosoft ? 'microsoft' : 'other' };
+                // Use explicitly requested provider first, then fall back to email inference
+                let provider = p.requested_provider;
+                if (!provider) {
+                    const isGoogle = email.includes('@gmail.com') || email.includes('@googlemail.com');
+                    const isMicrosoft = email.includes('@outlook.') || email.includes('@hotmail.') || 
+                                        email.includes('@live.') || email.includes('@msn.');
+                    provider = isGoogle ? 'google' : isMicrosoft ? 'microsoft' : 'other';
+                }
                 
-                if (isGoogle) {
+                const userData = { ...p, provider };
+                
+                if (provider === 'google') {
                     googleUsers.push(userData);
-                } else if (isMicrosoft) {
+                } else if (provider === 'microsoft') {
                     microsoftUsers.push(userData);
                 } else {
                     guestUsers.push(userData);
@@ -269,13 +275,19 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
     };
 
     // Approve a user
-    const handleApprove = async (email) => {
+    const handleApprove = async (email, userProvider = null) => {
         setApprovalLoading(prev => ({ ...prev, [email]: 'approving' }));
         try {
-            // Check limits before approving
-            const isGoogle = email.toLowerCase().includes('@gmail.com') || email.toLowerCase().includes('@googlemail.com');
-            const isMicrosoft = email.toLowerCase().includes('@outlook.') || email.toLowerCase().includes('@hotmail.') || 
-                                email.toLowerCase().includes('@live.') || email.toLowerCase().includes('@msn.');
+            // Use the provider from the user object, or fall back to email inference
+            let isGoogle = userProvider === 'google';
+            let isMicrosoft = userProvider === 'microsoft';
+            
+            // If no provider specified, infer from email
+            if (!userProvider) {
+                isGoogle = email.toLowerCase().includes('@gmail.com') || email.toLowerCase().includes('@googlemail.com');
+                isMicrosoft = email.toLowerCase().includes('@outlook.') || email.toLowerCase().includes('@hotmail.') || 
+                                    email.toLowerCase().includes('@live.') || email.toLowerCase().includes('@msn.');
+            }
             
             if (isGoogle && betaStats.google.approved >= GOOGLE_LIMIT) {
                 alert(`Cannot approve: Google user limit (${GOOGLE_LIMIT}) reached.`);
@@ -821,7 +833,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '0.25rem' }}>
                                                         <button
-                                                            onClick={() => handleApprove(u.email)}
+                                                            onClick={() => handleApprove(u.email, u.provider)}
                                                             disabled={approvalLoading[u.email]}
                                                             className="btn-approve"
                                                             title="Approve"

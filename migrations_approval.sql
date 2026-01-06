@@ -6,7 +6,8 @@
 ALTER TABLE profiles 
 ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS approved_by TEXT;
+ADD COLUMN IF NOT EXISTS approved_by TEXT,
+ADD COLUMN IF NOT EXISTS requested_provider TEXT; -- 'google' or 'microsoft'
 
 -- Create index for quick filtering
 CREATE INDEX IF NOT EXISTS idx_profiles_is_approved ON profiles(is_approved);

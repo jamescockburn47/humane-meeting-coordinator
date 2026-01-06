@@ -5675,6 +5675,48 @@ label {
   line-height: 1.4;
 }
 
+/* Provider Selection */
+.provider-select {
+  margin: 0.25rem 0;
+}
+
+.provider-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.provider-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.5rem;
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.provider-btn:hover {
+  border-color: var(--primary);
+  color: var(--text-main);
+}
+
+.provider-btn.selected {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.provider-btn .provider-icon {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
 /* Beta Feedback Section */
 .feedback-section {
   margin-top: 2rem;
