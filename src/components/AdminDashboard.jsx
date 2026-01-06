@@ -45,6 +45,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
     const [logs, setLogs] = useState([]);
     const [testResults, setTestResults] = useState(null);
     const [testRunning, setTestRunning] = useState(false);
+    const [userActivity, setUserActivity] = useState([]);
 
     // Check if already authenticated (session storage)
     useEffect(() => {
@@ -191,6 +192,9 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         // Fetch beta tester stats
         await fetchBetaStats();
 
+        // Fetch user activity
+        await fetchUserActivity();
+
         // Check OAuth configs
         checkOAuthConfig();
 
@@ -271,6 +275,70 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
             addLog(`Beta breakdown: ${googleUsers.filter(u => u.is_approved).length}/${GOOGLE_LIMIT} Google, ${microsoftUsers.filter(u => u.is_approved).length}/${MICROSOFT_LIMIT} Microsoft, ${pending.length} pending`, 'success');
         } catch (e) {
             addLog(`Beta stats failed: ${e.message}`, 'error');
+        }
+    };
+
+    // Fetch user activity summary (what users have done, without exposing private data)
+    const fetchUserActivity = async () => {
+        addLog('Fetching user activity...', 'info');
+        
+        try {
+            // Get all approved users with their activity metrics
+            const { data: profiles, error: profileError } = await supabase
+                .from('profiles')
+                .select('email, display_name, created_at, last_synced_at, is_approved, requested_provider')
+                .eq('is_approved', true)
+                .order('last_synced_at', { ascending: false, nullsFirst: false });
+
+            if (profileError) throw profileError;
+
+            // Get group counts per user
+            const { data: groupMemberships, error: memberError } = await supabase
+                .from('group_members')
+                .select('profile_email, group_id');
+
+            if (memberError) throw memberError;
+
+            // Get groups created by each user
+            const { data: groupsCreated, error: groupError } = await supabase
+                .from('groups')
+                .select('created_by, id');
+
+            if (groupError) throw groupError;
+
+            // Get booked meetings per user
+            const { data: meetings, error: meetingError } = await supabase
+                .from('booked_meetings')
+                .select('organizer_email, id');
+
+            // Build activity summary for each user
+            const activityData = (profiles || []).map(profile => {
+                const groupsJoined = (groupMemberships || []).filter(m => m.profile_email === profile.email).length;
+                const groupsOwned = (groupsCreated || []).filter(g => g.created_by === profile.email).length;
+                const meetingsBooked = (meetings || []).filter(m => m.organizer_email === profile.email).length;
+                
+                // Calculate days since last active
+                const lastActive = profile.last_synced_at ? new Date(profile.last_synced_at) : new Date(profile.created_at);
+                const daysSinceActive = Math.floor((Date.now() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+                
+                return {
+                    email: profile.email,
+                    name: profile.display_name || profile.email.split('@')[0],
+                    provider: profile.requested_provider || 'unknown',
+                    signedUp: profile.created_at,
+                    lastActive: profile.last_synced_at || profile.created_at,
+                    daysSinceActive,
+                    groupsJoined,
+                    groupsOwned,
+                    meetingsBooked,
+                    isActive: daysSinceActive <= 7
+                };
+            });
+
+            setUserActivity(activityData);
+            addLog(`Loaded activity for ${activityData.length} approved users`, 'success');
+        } catch (e) {
+            addLog(`User activity fetch failed: ${e.message}`, 'error');
         }
     };
 
@@ -898,6 +966,71 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                         </div>
                     </details>
                 </div>
+
+                {/* USER ACTIVITY MONITORING */}
+                {userActivity.length > 0 && (
+                    <div className="admin-section">
+                        <div className="section-header-row">
+                            <h3>📊 User Activity (Approved Users)</h3>
+                            <div className="activity-summary">
+                                <span className="activity-stat active">{userActivity.filter(u => u.isActive).length} active this week</span>
+                                <span className="activity-stat">{userActivity.filter(u => u.meetingsBooked > 0).length} booked meetings</span>
+                            </div>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                            Shows what approved users have done — no private calendar/availability details exposed.
+                        </p>
+                        <div className="data-table-container">
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Provider</th>
+                                        <th>Groups Joined</th>
+                                        <th>Groups Created</th>
+                                        <th>Meetings Booked</th>
+                                        <th>Last Active</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {userActivity.map(u => (
+                                        <tr key={u.email}>
+                                            <td>
+                                                <div style={{ fontWeight: 500 }}>{u.name}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{u.email}</div>
+                                            </td>
+                                            <td>
+                                                {u.provider === 'google' ? '🔵' : u.provider === 'microsoft' ? '🟢' : '⚪'}
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>{u.groupsJoined}</td>
+                                            <td style={{ textAlign: 'center' }}>{u.groupsOwned}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                {u.meetingsBooked > 0 ? (
+                                                    <span style={{ color: '#22c55e', fontWeight: 600 }}>{u.meetingsBooked}</span>
+                                                ) : (
+                                                    <span style={{ color: 'var(--text-muted)' }}>0</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {u.daysSinceActive === 0 ? 'Today' : 
+                                                 u.daysSinceActive === 1 ? 'Yesterday' :
+                                                 `${u.daysSinceActive} days ago`}
+                                            </td>
+                                            <td>
+                                                {u.isActive ? (
+                                                    <span className="status-approved">Active</span>
+                                                ) : (
+                                                    <span className="status-pending">Inactive</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
 
                 {/* Database Stats */}
                 <div className="admin-section">
