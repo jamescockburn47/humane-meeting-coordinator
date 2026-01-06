@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+// Beta invite code - can be overridden via environment variable
+const BETA_CODE = import.meta.env.VITE_BETA_CODE || 'HUMANE100';
 
 export function Sidebar({ 
     activeView, 
@@ -17,6 +20,29 @@ export function Sidebar({
     onShowAdmin,
     onTestCalendar
 }) {
+    const [hasBetaAccess, setHasBetaAccess] = useState(false);
+    const [betaCodeInput, setBetaCodeInput] = useState('');
+    const [betaError, setBetaError] = useState('');
+
+    // Check localStorage for existing beta access
+    useEffect(() => {
+        const savedAccess = localStorage.getItem('hasBetaAccess');
+        if (savedAccess === 'true') {
+            setHasBetaAccess(true);
+        }
+    }, []);
+
+    const handleBetaCodeSubmit = () => {
+        if (betaCodeInput.trim().toUpperCase() === BETA_CODE) {
+            setHasBetaAccess(true);
+            localStorage.setItem('hasBetaAccess', 'true');
+            setBetaError('');
+        } else {
+            setBetaError('Invalid invite code');
+            setTimeout(() => setBetaError(''), 3000);
+        }
+    };
+
     const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'GU';
 
     const getProviderLabel = (provider) => {
@@ -124,18 +150,55 @@ export function Sidebar({
                     </>
                 ) : (
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <button onClick={onLoginMS} className="btn-login btn-microsoft">
-                            Sign in with Microsoft
-                        </button>
-                        <button onClick={onLoginGoogle} className="btn-login btn-google">
-                            Sign in with Google
-                        </button>
+                        {/* BETA ACCESS GATE */}
+                        <div className="beta-notice">
+                            <div className="beta-badge">CLOSED BETA</div>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.5rem 0', lineHeight: 1.4 }}>
+                                Calendar sign-in limited to 100 users during verification.
+                            </p>
+                        </div>
+
+                        {hasBetaAccess ? (
+                            <>
+                                <button onClick={onLoginMS} className="btn-login btn-microsoft">
+                                    Sign in with Microsoft
+                                </button>
+                                <button onClick={onLoginGoogle} className="btn-login btn-google">
+                                    Sign in with Google
+                                </button>
+                            </>
+                        ) : (
+                            <div className="beta-code-section">
+                                <input
+                                    type="text"
+                                    placeholder="Enter invite code"
+                                    value={betaCodeInput}
+                                    onChange={(e) => setBetaCodeInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleBetaCodeSubmit()}
+                                    className="beta-code-input"
+                                />
+                                <button 
+                                    onClick={handleBetaCodeSubmit}
+                                    className="btn-ghost"
+                                    style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+                                >
+                                    Unlock
+                                </button>
+                                {betaError && (
+                                    <div className="beta-error">{betaError}</div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="divider-text">
                             <span>or</span>
                         </div>
                         <button onClick={onGuestJoin} className="btn-ghost guest-btn">
                             Continue as Guest
                         </button>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.25rem' }}>
+                            Guest mode works for everyone!
+                        </p>
                     </div>
                 )}
             </div>

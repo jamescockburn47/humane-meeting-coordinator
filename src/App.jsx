@@ -49,6 +49,9 @@ function App() {
   const [nightOwl, setNightOwl] = useState(false); // Allow midnight-6am slots
   const [showAvailabilityWizard, setShowAvailabilityWizard] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Idle");
+  const [betaBannerDismissed, setBetaBannerDismissed] = useState(() => {
+    return localStorage.getItem('betaBannerDismissed') === 'true';
+  });
 
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -841,6 +844,24 @@ function App() {
       )}
 
       <main className="main-area">
+        {/* Beta Banner - Dismissible */}
+        {activeAccount && !betaBannerDismissed && (
+          <div className="beta-banner">
+            <span className="beta-banner-text">
+              <strong>Alpha Preview:</strong> Humane Calendar is in closed testing. Calendar connections limited to 100 users pending Google verification.
+            </span>
+            <button 
+              className="beta-banner-close"
+              onClick={() => {
+                setBetaBannerDismissed(true);
+                localStorage.setItem('betaBannerDismissed', 'true');
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {view === 'dashboard' && (
           <div className="animate-fade-in">
             {/* Hero Section - Show when not logged in */}

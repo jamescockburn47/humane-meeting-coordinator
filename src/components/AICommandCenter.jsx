@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 
 /**
  * Clean AI Assistant - Minimal, subtle, useful
- * Collapsible input that expands to show results
+ * Restricted to signed-in users during beta
  */
 export function AICommandCenter({ 
     currentUser = null,
@@ -18,6 +18,9 @@ export function AICommandCenter({
     const [loading, setLoading] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const inputRef = useRef(null);
+
+    // Check if user is a guest (AI restricted during beta)
+    const isGuest = currentUser?.provider === 'guest';
 
     const buildContext = () => ({
         user: currentUser ? {
@@ -52,7 +55,7 @@ export function AICommandCenter({
     });
 
     const ask = async (question) => {
-        if (!question.trim()) return;
+        if (!question.trim() || isGuest) return;
         
         setLoading(true);
         setIsExpanded(true);
@@ -110,6 +113,35 @@ export function AICommandCenter({
     }
 
     if (!currentGroup) return null;
+
+    // GUEST TEASER - Show what AI can do but don't allow usage
+    if (isGuest) {
+        return (
+            <div className="ai-box ai-guest-teaser">
+                <div className="ai-bar">
+                    <div className="ai-bar-left">
+                        <span className="ai-label">AI</span>
+                        <span className="ai-beta-tag">Beta</span>
+                    </div>
+                </div>
+                <div className="ai-guest-content">
+                    <p className="ai-guest-title">AI Assistant (Coming Soon)</p>
+                    <p className="ai-guest-desc">
+                        Once we complete testing, the AI assistant will help you:
+                    </p>
+                    <ul className="ai-features-list">
+                        <li>Analyze timezone conflicts and find optimal times</li>
+                        <li>Suggest schedule adjustments for difficult groups</li>
+                        <li>Draft polite messages to members who haven't responded</li>
+                        <li>Recommend fair time rotations for recurring meetings</li>
+                    </ul>
+                    <p className="ai-guest-note">
+                        Sign in with Google or Microsoft to unlock AI features.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="ai-box">
