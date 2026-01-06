@@ -860,7 +860,7 @@ function App() {
         {activeAccount && !betaBannerDismissed && (
           <div className="beta-banner">
             <span className="beta-banner-text">
-              <strong>Alpha Preview:</strong> Humane Calendar is in closed testing. Calendar connections limited to 100 users pending Google verification.
+              <strong>Alpha Preview:</strong> Humane Calendar is in closed testing. Limited to 100 Google users + 100 Microsoft users pending verification.
             </span>
             <button 
               className="beta-banner-close"
@@ -876,47 +876,47 @@ function App() {
 
         {view === 'dashboard' && (
           <div className="animate-fade-in">
-            {/* Hero Section - Show when not logged in */}
-            {!activeAccount && (
-              <div className="hero-section">
-                <a href="/story" className="vibe-badge-link">
-                  <div className="vibe-badge">
-                    <span className="vibe-icon">⚡</span> Vibe coded in 48 hours — read the story
-                  </div>
-                </a>
-                <h1 className="hero-title">
-                  Schedule Across Timezones.<br />
-                  <span className="hero-highlight">Respect Everyone's Hours.</span>
-                </h1>
-                <p className="hero-subtitle">
-                  Each person picks when they're actually free — in their own timezone. 
-                  You see the overlap and send the invite.
-                </p>
-                <div className="hero-features">
-                  <div className="hero-feature">
-                    Invitees choose their own slots
-                  </div>
-                  <div className="hero-feature">
-                    Times shown in local hours
-                  </div>
-                  <div className="hero-feature">
-                    One-click calendar invite with video link
-                  </div>
+            {/* Hero Section - Always visible */}
+            <div className="hero-section">
+              <a href="/story" className="vibe-badge-link">
+                <div className="vibe-badge">
+                  <span className="vibe-icon">⚡</span> Vibe coded in 48 hours — read the story
                 </div>
+              </a>
+              <h1 className="hero-title">
+                Schedule Across Timezones.<br />
+                <span className="hero-highlight">Respect Everyone's Hours.</span>
+              </h1>
+              <p className="hero-subtitle">
+                Each person picks when they're actually free — in their own timezone. 
+                You see the overlap and send the invite.
+              </p>
+              <div className="hero-features">
+                <div className="hero-feature">
+                  Invitees choose their own slots
+                </div>
+                <div className="hero-feature">
+                  Times shown in local hours
+                </div>
+                <div className="hero-feature">
+                  One-click calendar invite with video link
+                </div>
+              </div>
+              {!activeAccount && (
                 <div className="hero-cta">
                   <p className="hero-cta-text">Sign in to create a scheduling group:</p>
                 </div>
+              )}
+              <div className="hero-links">
+                <a href="https://james.cockburn.io" target="_blank" rel="noopener noreferrer" className="hero-author-link">james.cockburn.io</a>
+                <span className="hero-link-divider">•</span>
+                <a href="https://www.linkedin.com/in/james-cockburn/" target="_blank" rel="noopener noreferrer" className="hero-author-link">LinkedIn</a>
               </div>
-            )}
+            </div>
 
-            {/* Dashboard header with story link for logged-in users */}
+            {/* Dashboard header */}
             <div className="dashboard-header">
               <h2>{activeAccount ? 'Dashboard' : ''}</h2>
-              {activeAccount && (
-                <a href="/story" className="story-link-compact">
-                  <span className="vibe-icon">⚡</span> Read the story
-                </a>
-              )}
             </div>
 
             <div className="grid-cols-2" style={{ marginBottom: '2rem' }}>

@@ -138,6 +138,14 @@ export function StoryPage() {
                             <span className="story-role">Litigator, London</span><br />
                             <span className="story-role">Amateur Legal Tech Enthusiast</span>
                         </p>
+                        <div className="story-author-links">
+                            <a href="https://james.cockburn.io" target="_blank" rel="noopener noreferrer" className="author-link">
+                                🌐 james.cockburn.io
+                            </a>
+                            <a href="https://www.linkedin.com/in/james-cockburn/" target="_blank" rel="noopener noreferrer" className="author-link">
+                                💼 LinkedIn
+                            </a>
+                        </div>
                     </div>
                 </div>
 

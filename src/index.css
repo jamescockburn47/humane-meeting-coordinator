@@ -252,6 +252,30 @@ body {
   color: var(--text-muted);
 }
 
+.hero-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+}
+
+.hero-author-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: color 0.2s;
+}
+
+.hero-author-link:hover {
+  color: var(--primary);
+}
+
+.hero-link-divider {
+  color: var(--border);
+}
+
 @media (max-width: 768px) {
   .hero-section {
     padding: 2rem 1rem;
@@ -2421,6 +2445,25 @@ label {
 .story-role {
   font-size: 0.9rem;
   color: var(--text-muted);
+}
+
+.story-author-links {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.author-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: opacity 0.2s;
+}
+
+.author-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
 }
 
 .story-cta {
