@@ -52,11 +52,17 @@ export const msalConfig = {
 /**
  * Scopes you add here will be prompted for user consent during sign-in.
  * By default, MSAL.js will add OIDC scopes (openid, profile, email) to any login request.
- * For more information about OIDC scopes, visit: 
- * https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#openid-connect-scopes
+ * 
+ * MINIMAL PERMISSIONS APPROACH:
+ * - User.Read: Basic profile info (name, email)
+ * - Calendars.ReadBasic: Only free/busy info, NOT event details
+ * - Calendars.ReadWrite: Create events (required for sending invites)
+ * 
+ * Note: We removed Calendars.Read.Shared as we don't need access to shared calendars.
+ * This matches our privacy-first approach - we only see when you're busy, not what you're doing.
  */
 export const loginRequest = {
-    scopes: ["User.Read", "Calendars.Read.Shared", "Calendars.ReadWrite"]
+    scopes: ["User.Read", "Calendars.ReadBasic", "Calendars.ReadWrite"]
 };
 
 /**
