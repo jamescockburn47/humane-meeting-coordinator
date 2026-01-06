@@ -386,7 +386,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         }
     };
 
-    // Reject a user
+    // Reject/Revoke access for a user (sets is_approved = false)
     const handleReject = async (email) => {
         setApprovalLoading(prev => ({ ...prev, [email]: 'rejecting' }));
         try {
@@ -401,11 +401,47 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
 
             if (error) throw error;
 
-            addLog(`❌ Rejected: ${email}`, 'info');
+            addLog(`❌ Revoked access: ${email}`, 'info');
             await fetchBetaStats(); // Refresh stats
         } catch (e) {
-            addLog(`Failed to reject ${email}: ${e.message}`, 'error');
-            alert('Rejection failed: ' + e.message);
+            addLog(`Failed to revoke ${email}: ${e.message}`, 'error');
+            alert('Revoke failed: ' + e.message);
+        } finally {
+            setApprovalLoading(prev => ({ ...prev, [email]: null }));
+        }
+    };
+    
+    // Completely delete a user from the system
+    const handleDeleteUser = async (email) => {
+        const confirmed = confirm(`⚠️ PERMANENTLY DELETE ${email}?\n\nThis will:\n- Remove their profile\n- Remove them from all groups\n- This cannot be undone!`);
+        if (!confirmed) return;
+        
+        setApprovalLoading(prev => ({ ...prev, [email]: 'deleting' }));
+        try {
+            // First remove from all groups
+            const { error: memberError } = await supabase
+                .from('group_members')
+                .delete()
+                .eq('profile_email', email);
+            
+            if (memberError) {
+                console.warn('Error removing group memberships:', memberError);
+            }
+            
+            // Then delete the profile
+            const { error } = await supabase
+                .from('profiles')
+                .delete()
+                .eq('email', email);
+
+            if (error) throw error;
+
+            addLog(`🗑️ Deleted user: ${email}`, 'info');
+            await fetchBetaStats(); // Refresh stats
+            await checkAllSystems(); // Full refresh
+        } catch (e) {
+            addLog(`Failed to delete ${email}: ${e.message}`, 'error');
+            alert('Delete failed: ' + e.message);
         } finally {
             setApprovalLoading(prev => ({ ...prev, [email]: null }));
         }
@@ -903,28 +939,39 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                                                 )}
                                             </td>
                                             <td>
-                                                {u.is_approved !== true && (
+                                                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                                    {u.is_approved !== true && (
+                                                        <button
+                                                            onClick={() => handleApprove(u.email, u.provider)}
+                                                            disabled={approvalLoading[u.email]}
+                                                            className="btn-approve"
+                                                            title="Approve"
+                                                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                                                        >
+                                                            {approvalLoading[u.email] === 'approving' ? '...' : '✓'}
+                                                        </button>
+                                                    )}
+                                                    {u.is_approved === true && (
+                                                        <button
+                                                            onClick={() => handleReject(u.email)}
+                                                            disabled={approvalLoading[u.email]}
+                                                            className="btn-warning"
+                                                            title="Revoke Access"
+                                                            style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }}
+                                                        >
+                                                            {approvalLoading[u.email] === 'rejecting' ? '...' : 'Revoke'}
+                                                        </button>
+                                                    )}
                                                     <button
-                                                        onClick={() => handleApprove(u.email, u.provider)}
+                                                        onClick={() => handleDeleteUser(u.email)}
                                                         disabled={approvalLoading[u.email]}
-                                                        className="btn-approve"
-                                                        title="Approve"
-                                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                                                        className="btn-danger"
+                                                        title="Delete User Permanently"
+                                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }}
                                                     >
-                                                        {approvalLoading[u.email] === 'approving' ? '...' : '✓'}
+                                                        {approvalLoading[u.email] === 'deleting' ? '...' : '🗑️'}
                                                     </button>
-                                                )}
-                                                {u.is_approved !== false && (
-                                                    <button
-                                                        onClick={() => handleReject(u.email)}
-                                                        disabled={approvalLoading[u.email]}
-                                                        className="btn-reject"
-                                                        title="Reject"
-                                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', marginLeft: '0.25rem' }}
-                                                    >
-                                                        {approvalLoading[u.email] === 'rejecting' ? '...' : '✗'}
-                                                    </button>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
