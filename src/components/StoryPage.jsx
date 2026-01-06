@@ -120,6 +120,31 @@ export function StoryPage() {
                         Report them and help prove — or disprove — that this approach works.
                     </p>
 
+                    <h2>The Pricing Philosophy</h2>
+                    <p>
+                        When Humane Calendar launches properly, there will be a small fee to cover 
+                        hosting and API costs. This isn't intended as a profit exercise.
+                    </p>
+                    <p>
+                        Vibe coding is quick, but it still requires expertise — understanding the problem, 
+                        knowing how to prompt effectively, testing relentlessly, and iterating until 
+                        it actually works. The time saved on traditional development gets reinvested 
+                        into making the product better.
+                    </p>
+                    <p>
+                        <strong>My ethos is simple: keep user costs as low as realistically possible.</strong> 
+                        If the servers cost £X and the AI APIs cost £Y, I'll charge enough to cover that 
+                        plus a small buffer — not 10x markup for "SaaS margins." The goal is sustainability, 
+                        not extraction.
+                    </p>
+                    <div className="story-highlight pricing-note">
+                        <p>
+                            <strong>During beta:</strong> Completely free.<br />
+                            <strong>After launch:</strong> Small fee to cover real costs.<br />
+                            <strong>Forever:</strong> No investor pressure to maximize revenue.
+                        </p>
+                    </div>
+
                     <h2>Why "Humane"?</h2>
                     <p>
                         Most scheduling tools treat people like machines. If the calendar says "free," 

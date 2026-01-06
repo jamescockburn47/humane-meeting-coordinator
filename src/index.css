@@ -2396,6 +2396,21 @@ label {
   margin-bottom: 0;
 }
 
+.story-highlight.pricing-note {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(218, 165, 32, 0.08));
+  border-color: rgba(16, 185, 129, 0.25);
+  text-align: center;
+}
+
+.story-highlight.pricing-note p {
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.story-highlight.pricing-note strong {
+  color: #10b981;
+}
+
 .security-list {
   margin: 1rem 0 1.5rem 0;
   padding-left: 1.5rem;
