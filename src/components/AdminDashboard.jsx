@@ -194,6 +194,10 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
+            
+            // Debug: log all profiles to console
+            console.log('All profiles from Supabase:', profiles);
+            addLog(`Found ${profiles?.length || 0} total profiles`, 'info');
 
             // Categorize by provider - use requested_provider if set, otherwise infer from email
             const googleUsers = [];
@@ -794,9 +798,14 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                     </div>
 
                     {/* PENDING APPROVALS QUEUE */}
-                    {pendingUsers.length > 0 && (
-                        <div className="pending-approvals-section">
-                            <h4>⏳ Pending Approvals ({pendingUsers.length})</h4>
+                    {/* Pending approvals section */}
+                    <div className="pending-approvals-section">
+                        <h4>⏳ Pending Approvals ({pendingUsers.length})</h4>
+                        {pendingUsers.length === 0 ? (
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '1rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '4px' }}>
+                                No pending requests. Users who request access via the "Request Beta Access" form will appear here.
+                            </p>
+                        ) : (
                             <div className="data-table-container" style={{ marginTop: '0.5rem' }}>
                                 <table className="admin-table">
                                     <thead>
@@ -844,8 +853,72 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                                     </tbody>
                                 </table>
                             </div>
+                        )}
+                    </div>
+                    
+                    {/* All users section for debugging/management */}
+                    <div className="all-users-section" style={{ marginTop: '1.5rem' }}>
+                        <h4>👥 All Users ({betaStats.google.count + betaStats.microsoft.count + betaStats.guest.count})</h4>
+                        <div className="data-table-container" style={{ marginTop: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Email</th>
+                                        <th>Name</th>
+                                        <th>Provider</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {[...betaStats.google.users, ...betaStats.microsoft.users, ...betaStats.guest.users].map(u => (
+                                        <tr key={u.email}>
+                                            <td style={{ fontSize: '0.8rem' }}>{u.email}</td>
+                                            <td>{u.display_name || '-'}</td>
+                                            <td>
+                                                {u.provider === 'google' ? '🔵' :
+                                                 u.provider === 'microsoft' ? '🟢' :
+                                                 '⚪'}
+                                            </td>
+                                            <td>
+                                                {u.is_approved === true ? (
+                                                    <span style={{ color: 'var(--success)' }}>✅ Approved</span>
+                                                ) : u.is_approved === false ? (
+                                                    <span style={{ color: 'var(--error)' }}>❌ Rejected</span>
+                                                ) : (
+                                                    <span style={{ color: 'var(--warning)' }}>⏳ Pending</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {u.is_approved !== true && (
+                                                    <button
+                                                        onClick={() => handleApprove(u.email, u.provider)}
+                                                        disabled={approvalLoading[u.email]}
+                                                        className="btn-approve"
+                                                        title="Approve"
+                                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                                                    >
+                                                        {approvalLoading[u.email] === 'approving' ? '...' : '✓'}
+                                                    </button>
+                                                )}
+                                                {u.is_approved !== false && (
+                                                    <button
+                                                        onClick={() => handleReject(u.email)}
+                                                        disabled={approvalLoading[u.email]}
+                                                        className="btn-reject"
+                                                        title="Reject"
+                                                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', marginLeft: '0.25rem' }}
+                                                    >
+                                                        {approvalLoading[u.email] === 'rejecting' ? '...' : '✗'}
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    )}
+                    </div>
 
                     <details className="beta-user-list">
                         <summary>View All Users ({stats.profiles.count})</summary>
