@@ -6,7 +6,7 @@ export function HowItWorks({ isStandalone = false, onClose }) {
             <div className="how-header">
                 <h2>How Humane Calendar Works</h2>
                 <p className="how-tagline">
-                    Calendly fills your calendar. <strong>We protect your energy.</strong>
+                    Traditional tools fill your calendar. <strong>We protect your energy.</strong>
                 </p>
             </div>
 
@@ -20,19 +20,53 @@ export function HowItWorks({ isStandalone = false, onClose }) {
                 boundaries, and timezone differences — so you can schedule like a human, not a machine.
             </p>
 
-            {/* Why Not Calendly */}
+            {/* AI-Powered Features */}
+            <div className="how-section ai-features">
+                <h3>🤖 AI-Powered Scheduling Intelligence</h3>
+                <p className="ai-intro">
+                    Unlike traditional scheduling tools, Humane Calendar uses AI to actively help you find the right time.
+                </p>
+                
+                <div className="ai-feature-grid">
+                    <div className="ai-feature-card">
+                        <div className="ai-feature-icon">🔍</div>
+                        <h4>Smart Availability Analysis</h4>
+                        <p>AI scans everyone's availability windows and calendar conflicts, then instantly identifies times that work across all timezones.</p>
+                    </div>
+                    
+                    <div className="ai-feature-card">
+                        <div className="ai-feature-icon">💡</div>
+                        <h4>Intelligent Suggestions</h4>
+                        <p>When no perfect time exists, the AI explains exactly why and suggests specific changes each person could make.</p>
+                    </div>
+                    
+                    <div className="ai-feature-card">
+                        <div className="ai-feature-icon">⚖️</div>
+                        <h4>Fairness Scoring</h4>
+                        <p>The AI calculates timezone fairness so the same people don't always get stuck with early morning or late night calls.</p>
+                    </div>
+                    
+                    <div className="ai-feature-card">
+                        <div className="ai-feature-icon">📊</div>
+                        <h4>Group Insights</h4>
+                        <p>Understand your group at a glance — timezone spread, who hasn't set availability, and what's blocking the perfect time.</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Why Different */}
             <div className="how-section calendly-compare">
-                <h3>Why Teams Are Switching from Calendly</h3>
+                <h3>Why Humane Calendar is Different</h3>
                 
                 <div className="compare-cards">
                     <div className="compare-card old-way">
-                        <div className="compare-label">The Calendly Way</div>
+                        <div className="compare-label">Traditional Scheduling</div>
                         <ul>
                             <li>You send a link and say "you figure it out"</li>
                             <li>Burden on the guest to find a good time</li>
                             <li>Group meetings require voting polls</li>
                             <li>Empty slot = available (even 6 AM)</li>
-                            <li>Feels like a gatekeeper</li>
+                            <li>No intelligence — just availability grids</li>
                         </ul>
                     </div>
                     
@@ -66,21 +100,21 @@ export function HowItWorks({ isStandalone = false, onClose }) {
                     
                     <div className="principle-card">
                         <div className="principle-num">2</div>
-                        <h4>Decision, Not Transaction</h4>
+                        <h4>AI-Powered Decision Making</h4>
                         <p>
-                            Calendly is passive — you send a link and hope for the best. 
-                            We give you AI to say: "I've analyzed our time zones. This is the 
-                            best time for us to meet." It shows leadership and care.
+                            Traditional tools are passive — you send a link and hope for the best. 
+                            Our AI says: "I've analyzed your timezones and availability. Here's the 
+                            best time for everyone." It shows leadership and care.
                         </p>
                     </div>
                     
                     <div className="principle-card">
                         <div className="principle-num">3</div>
-                        <h4>Group Scheduling Without Polls</h4>
+                        <h4>Instant Group Analysis</h4>
                         <p>
-                            Five-person meetings on Calendly require a voting poll where everyone 
+                            Multi-person meetings usually require voting polls where everyone 
                             picks manually. Our AI reads the data and finds the overlap instantly. 
-                            No voting, no democracy — just the right answer.
+                            No voting, no waiting — just the right answer.
                         </p>
                     </div>
                     
@@ -122,7 +156,7 @@ export function HowItWorks({ isStandalone = false, onClose }) {
                         <div className="step-content">
                             <h4>AI Finds the Overlap</h4>
                             <p>
-                                Our algorithm analyzes everyone's availability and timezone, 
+                                Our AI analyzes everyone's availability and timezone, 
                                 then highlights times that work for all — with fairness scoring 
                                 so the same people don't always get the bad slots.
                             </p>
@@ -168,51 +202,37 @@ export function HowItWorks({ isStandalone = false, onClose }) {
                 </div>
             </div>
 
-            {/* Comparison Table */}
+            {/* What Makes Us Different */}
             <div className="how-section">
-                <h3>How We Compare</h3>
-                <div className="comparison-table-v2">
-                    <div className="comp-row header">
-                        <div className="comp-cell"></div>
-                        <div className="comp-cell">Invitees pick slots</div>
-                        <div className="comp-cell">No voting required</div>
-                        <div className="comp-cell">Sends invite</div>
-                        <div className="comp-cell">Wellness-aware</div>
+                <h3>What Makes Us Different</h3>
+                <div className="diff-grid">
+                    <div className="diff-item">
+                        <div className="diff-check">✓</div>
+                        <div>
+                            <strong>Invitees pick their own slots</strong>
+                            <p>No guessing what works — everyone defines their availability</p>
+                        </div>
                     </div>
-                    <div className="comp-row">
-                        <div className="comp-cell tool">Calendly</div>
-                        <div className="comp-cell no">✗</div>
-                        <div className="comp-cell no">✗</div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell no">✗</div>
+                    <div className="diff-item">
+                        <div className="diff-check">✓</div>
+                        <div>
+                            <strong>No voting or polling required</strong>
+                            <p>AI calculates overlap instantly across any group size</p>
+                        </div>
                     </div>
-                    <div className="comp-row">
-                        <div className="comp-cell tool">Doodle</div>
-                        <div className="comp-cell no">✗</div>
-                        <div className="comp-cell no">✗</div>
-                        <div className="comp-cell no">✗</div>
-                        <div className="comp-cell no">✗</div>
+                    <div className="diff-item">
+                        <div className="diff-check">✓</div>
+                        <div>
+                            <strong>Sends real calendar invites</strong>
+                            <p>With video links included — no manual follow-up needed</p>
+                        </div>
                     </div>
-                    <div className="comp-row">
-                        <div className="comp-cell tool">When2Meet</div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell no">✗</div>
-                        <div className="comp-cell no">✗</div>
-                    </div>
-                    <div className="comp-row">
-                        <div className="comp-cell tool">Reclaim</div>
-                        <div className="comp-cell no">✗</div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell no">✗</div>
-                    </div>
-                    <div className="comp-row featured">
-                        <div className="comp-cell tool"><strong>Humane Calendar</strong></div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell yes">✓</div>
-                        <div className="comp-cell yes">✓</div>
+                    <div className="diff-item">
+                        <div className="diff-check">✓</div>
+                        <div>
+                            <strong>Wellness-aware scheduling</strong>
+                            <p>Respects sleep cycles and work-life balance across timezones</p>
+                        </div>
                     </div>
                 </div>
             </div>

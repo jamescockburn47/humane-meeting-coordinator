@@ -37,9 +37,10 @@ export function StoryPage() {
                         beyond. Everyone wants to jump on calls, share demos, and collaborate.
                     </p>
                     <p>
-                        But coordinating times is a nightmare. Calendly doesn't work when everyone has 
-                        day jobs and wildly different schedules. When2Meet shows overlap but doesn't 
-                        send invites. I was spending more time scheduling than actually talking.
+                        But coordinating times is a nightmare. Traditional scheduling tools don't work 
+                        when everyone has day jobs and wildly different schedules. Some show overlap 
+                        but don't send invites. Others require voting polls that take days. I was 
+                        spending more time scheduling than actually talking.
                     </p>
 
                     <h2>The Experiment</h2>
@@ -144,6 +145,22 @@ export function StoryPage() {
                             <strong>Forever:</strong> No investor pressure to maximize revenue.
                         </p>
                     </div>
+
+                    <h2>The AI Difference</h2>
+                    <p>
+                        Most scheduling tools are essentially just shared calendars. You still have 
+                        to figure out the best time yourself. Humane Calendar uses AI to do the thinking:
+                    </p>
+                    <ul className="ai-list">
+                        <li><strong>Analyzes availability</strong> across any number of people and timezones</li>
+                        <li><strong>Suggests specific changes</strong> when no perfect time exists</li>
+                        <li><strong>Explains group dynamics</strong> — who's blocking, what would help</li>
+                        <li><strong>Scores fairness</strong> so the same people don't always get bad times</li>
+                    </ul>
+                    <p>
+                        It's not just a calendar grid. It's an intelligent assistant that helps you 
+                        coordinate without the back-and-forth.
+                    </p>
 
                     <h2>Why "Humane"?</h2>
                     <p>

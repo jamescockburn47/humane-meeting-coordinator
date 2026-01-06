@@ -2301,7 +2301,7 @@ label {
   color: var(--primary);
 }
 
-/* Calendly vs Humane Comparison Cards */
+/* Traditional vs Humane Comparison Cards */
 .compare-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2682,6 +2682,99 @@ label {
 .security-list li {
   margin-bottom: 0.75rem;
   line-height: 1.6;
+}
+
+.ai-list {
+  margin: 1rem 0 1.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.ai-list li {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.ai-list li strong {
+  color: var(--primary);
+}
+
+/* AI Features Section */
+.ai-features {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(218, 165, 32, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.ai-features h3 {
+  margin-top: 0;
+  color: var(--primary);
+}
+
+.ai-intro {
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.ai-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.ai-feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.ai-feature-icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.ai-feature-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.ai-feature-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Diff Grid - What Makes Us Different */
+.diff-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.diff-item {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.diff-check {
+  font-size: 1.25rem;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.diff-item strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.diff-item p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .story-warning {
