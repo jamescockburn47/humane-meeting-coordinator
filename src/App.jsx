@@ -1127,6 +1127,35 @@ function App() {
                 <div style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No groups yet. Create one to get started!</div>
               )}
             </div>
+
+            {/* Beta Feedback Section - Only for logged-in users */}
+            {activeAccount && (
+              <div className="feedback-section">
+                <div className="feedback-card">
+                  <h4>🧪 You're a Beta Tester!</h4>
+                  <p>Thank you for testing Humane Calendar. Your feedback shapes the product.</p>
+                  <div className="feedback-actions">
+                    <a 
+                      href="https://forms.gle/YOUR_GOOGLE_FORM_ID" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="btn-primary"
+                    >
+                      📝 Send Feedback
+                    </a>
+                    <a 
+                      href="mailto:james@cockburn.io?subject=Humane Calendar Beta Feedback" 
+                      className="btn-ghost"
+                    >
+                      ✉️ Email Directly
+                    </a>
+                  </div>
+                  <p className="feedback-note">
+                    Found a bug? Have a feature idea? Let me know!
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

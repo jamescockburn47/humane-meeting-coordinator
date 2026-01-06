@@ -212,6 +212,18 @@ export function Sidebar({
             </div>
 
             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+                {/* Feedback button for logged-in users */}
+                {user && (
+                    <a
+                        href="https://forms.gle/YOUR_GOOGLE_FORM_ID"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="feedback-link"
+                        title="Send feedback about your beta experience"
+                    >
+                        📝 Send Feedback
+                    </a>
+                )}
                 <a
                     href="/how-it-works"
                     className="how-link"
