@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BookingModal } from './BookingModal';
 import { SmartSuggestions } from './SmartSuggestions';
 import { AICommandCenter } from './AICommandCenter';
-import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup, updateGroupMeetingSettings, supabase } from '../services/supabase';
+import { getGroupMembers, removeMember, makeAdmin, getGroupDetails, deleteGroup, updateGroupMeetingSettings, supabase, getBookedMeetings } from '../services/supabase';
 
 // Invite Link Card Component - Focused on sharing links with optional date range
 function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, duration }) {
@@ -320,6 +320,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
     const [members, setMembers] = useState([]);
     const [fullGroupDetails, setFullGroupDetails] = useState(group);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [bookedMeetings, setBookedMeetings] = useState([]);
 
     // Track previous member count to detect new joins
     const [prevMemberCount, setPrevMemberCount] = useState(0);
@@ -342,6 +343,9 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     setSettingsLoaded(true);
                 }
             }
+            // Fetch booked meetings
+            const meetings = await getBookedMeetings(group.id);
+            setBookedMeetings(meetings);
         };
         loadData();
     }, [group.id, refreshTrigger, settingsLoaded, onMembersLoaded]);
@@ -360,7 +364,7 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
         }
         
         setPrevMemberCount(members.length);
-    }, [members.length, settingsLoaded, hasAutoSearched, prevMemberCount, loading, onFindTimes, startDate, endDate, duration]);
+    }, [members.length, settingsLoaded, hasAutoSearched, prevMemberCount, loading, onFindTimes, group.id, startDate, endDate, duration]);
 
     // REAL-TIME: Subscribe to member changes (new joins, availability updates)
     useEffect(() => {
@@ -481,6 +485,8 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                         try {
                             await onBook(group.id, bookingSlot, subj, desc, membersToInvite);
                             setBookingSlot(null);
+                            // Refresh to show the new booked meeting
+                            setRefreshTrigger(p => p + 1);
                         } catch (err) {
                             console.error(err);
                         } finally {
@@ -612,6 +618,65 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                     </div>
                 </div>
             </div>
+
+            {/* Booked Meetings - Show scheduled meetings for this group */}
+            {bookedMeetings.length > 0 && (
+                <div className="booked-meetings-section">
+                    <h3>📅 Scheduled Meetings</h3>
+                    <div className="booked-meetings-list">
+                        {bookedMeetings.map(meeting => {
+                            const startDate = new Date(meeting.start_time);
+                            const endDate = new Date(meeting.end_time);
+                            const isPast = startDate < new Date();
+                            const isUpcoming = !isPast && startDate - new Date() < 24 * 60 * 60 * 1000; // Within 24 hours
+                            
+                            return (
+                                <div 
+                                    key={meeting.id} 
+                                    className={`booked-meeting-card ${isPast ? 'past' : ''} ${isUpcoming ? 'upcoming' : ''}`}
+                                >
+                                    <div className="meeting-datetime">
+                                        <div className="meeting-date">
+                                            {startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        </div>
+                                        <div className="meeting-time">
+                                            {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+                                            {' – '}
+                                            {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                    </div>
+                                    <div className="meeting-details">
+                                        <div className="meeting-subject">{meeting.subject}</div>
+                                        {meeting.attendees && (
+                                            <div className="meeting-attendees">
+                                                {meeting.attendees.length} attendees
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="meeting-actions">
+                                        {meeting.meeting_link && (
+                                            <a 
+                                                href={meeting.meeting_link} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="btn-join-meeting"
+                                            >
+                                                Join
+                                            </a>
+                                        )}
+                                        {isUpcoming && (
+                                            <span className="upcoming-badge">Upcoming</span>
+                                        )}
+                                        {isPast && (
+                                            <span className="past-badge">Completed</span>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* AI Command Center - Prominent AI assistant with action buttons */}
             <AICommandCenter

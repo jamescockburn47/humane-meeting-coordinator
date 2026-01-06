@@ -446,3 +446,65 @@ export async function exportUserData(email) {
         availabilitySlots: availability || []
     };
 }
+
+/**
+ * Save a booked meeting for a group
+ */
+export async function saveBookedMeeting(groupId, meetingData) {
+    const { data, error } = await supabase
+        .from('booked_meetings')
+        .insert({
+            group_id: groupId,
+            subject: meetingData.subject,
+            description: meetingData.description || '',
+            start_time: meetingData.start,
+            end_time: meetingData.end,
+            organizer_email: meetingData.organizerEmail,
+            attendees: meetingData.attendees || [],
+            meeting_link: meetingData.meetingLink || null,
+            calendar_event_id: meetingData.eventId || null,
+            status: 'confirmed'
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Failed to save booked meeting:", error);
+        return null;
+    }
+    return data;
+}
+
+/**
+ * Get all booked meetings for a group
+ */
+export async function getBookedMeetings(groupId) {
+    const { data, error } = await supabase
+        .from('booked_meetings')
+        .select('*')
+        .eq('group_id', groupId)
+        .eq('status', 'confirmed')
+        .order('start_time', { ascending: true });
+
+    if (error) {
+        console.error("Failed to fetch booked meetings:", error);
+        return [];
+    }
+    return data || [];
+}
+
+/**
+ * Cancel a booked meeting
+ */
+export async function cancelBookedMeeting(meetingId) {
+    const { error } = await supabase
+        .from('booked_meetings')
+        .update({ status: 'cancelled' })
+        .eq('id', meetingId);
+
+    if (error) {
+        console.error("Failed to cancel meeting:", error);
+        return { error };
+    }
+    return { error: null };
+}

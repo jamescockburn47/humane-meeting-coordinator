@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-import { updateProfile, getProfile, createGroup, joinGroup, getGroupMembers, getBusySlotsForUsers, syncAvailability, supabase, deleteAllUserData, exportUserData, checkApprovalStatus, checkBetaLimits } from "./services/supabase";
+import { updateProfile, getProfile, createGroup, joinGroup, getGroupMembers, getBusySlotsForUsers, syncAvailability, supabase, deleteAllUserData, exportUserData, checkApprovalStatus, checkBetaLimits, saveBookedMeeting } from "./services/supabase";
 import { findCommonHumaneSlots } from './services/scheduler';
 import { callMsGraph, findMeetingTimes, createMeeting } from './services/graph';
 import { fetchGoogleAvailability, createGoogleEvent } from './services/google';
@@ -774,6 +774,19 @@ function App() {
           organizerEmail
         );
         console.log("Google Event created:", result);
+        
+        // Save to database for display in group
+        await saveBookedMeeting(groupId, {
+          subject,
+          description,
+          start: slot.start,
+          end: slot.end,
+          organizerEmail,
+          attendees: members.map(m => ({ email: m.email, name: m.display_name || m.email })),
+          meetingLink: result.hangoutLink || result.conferenceData?.entryPoints?.[0]?.uri,
+          eventId: result.id
+        });
+        
         alert(`✅ Meeting created with Google Meet!\n\nAll ${memberEmails.length} attendees will receive a calendar invitation with the video link.`);
       } else if (activeAccount.provider === 'microsoft') {
         const tokenResponse = await instance.acquireTokenSilent({ 
@@ -800,6 +813,18 @@ function App() {
           isPersonalAccount
         );
         console.log("Microsoft Event created:", result);
+        
+        // Save to database for display in group
+        await saveBookedMeeting(groupId, {
+          subject,
+          description,
+          start: slot.start,
+          end: slot.end,
+          organizerEmail,
+          attendees: members.map(m => ({ email: m.email, name: m.display_name || m.email })),
+          meetingLink: result.onlineMeeting?.joinUrl,
+          eventId: result.id
+        });
         
         // Show appropriate message
         const hasTeams = result.onlineMeeting?.joinUrl;
