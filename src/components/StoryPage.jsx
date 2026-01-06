@@ -31,14 +31,15 @@ export function StoryPage() {
                         share ideas across every timezone.
                     </p>
                     <p>
-                        The community is incredibly enthusiastic. People in Sydney, San Francisco, Berlin, 
-                        and Mumbai all want to jump on calls, share demos, and collaborate. But coordinating 
-                        times is a nightmare.
+                        The community is incredibly enthusiastic. Thanks to <strong>Jamie Tso</strong> for 
+                        setting up the Vibe Coding group and spearheading — it's brought together people 
+                        from Hong Kong, Sydney, Singapore, Toronto, New York, San Francisco, London, and 
+                        beyond. Everyone wants to jump on calls, share demos, and collaborate.
                     </p>
                     <p>
-                        Calendly doesn't work when everyone has day jobs and wildly different schedules. 
-                        When2Meet shows overlap but doesn't send invites. I was spending more time 
-                        scheduling than actually talking.
+                        But coordinating times is a nightmare. Calendly doesn't work when everyone has 
+                        day jobs and wildly different schedules. When2Meet shows overlap but doesn't 
+                        send invites. I was spending more time scheduling than actually talking.
                     </p>
 
                     <h2>The Experiment</h2>
@@ -47,8 +48,10 @@ export function StoryPage() {
                         useful working software to fix a specific problem?</strong>
                     </p>
                     <p>
-                        I described my problem to Claude (an AI assistant), iterated through prompts, 
-                        debugged errors I didn't fully understand, and kept pushing until something worked.
+                        I described my problem to <strong>Cursor</strong> (an AI-powered code editor), 
+                        using <strong>Claude Opus 4.5</strong> as the underlying model. I iterated through 
+                        prompts, debugged errors I didn't fully understand, and kept pushing until 
+                        something worked.
                     </p>
                     <p>
                         48 hours later, Humane Calendar existed.
@@ -65,6 +68,35 @@ export function StoryPage() {
                         <p>
                             It's a fundamentally different relationship with technology — you're the 
                             product owner, the tester, and the user. The AI is the developer.
+                        </p>
+                    </div>
+
+                    <h2>Security Approach</h2>
+                    <p>
+                        I've taken a security-conscious approach to permissions. Humane Calendar only 
+                        asks for access to:
+                    </p>
+                    <ul className="security-list">
+                        <li><strong>Create calendar events</strong> — so we can send meeting invites on your behalf</li>
+                        <li><strong>Check when you're free/busy</strong> (optional) — so we can avoid double-booking you</li>
+                    </ul>
+                    <p>
+                        We don't read your event titles, attendees, or any other calendar details. 
+                        Just whether a time slot is blocked or free.
+                    </p>
+
+                    <div className="story-warning">
+                        <h3>⚠️ Beta Caveat</h3>
+                        <p>
+                            I'm still learning about the security side of building web applications. 
+                            This is a proof of concept, not battle-tested enterprise software.
+                        </p>
+                        <p>
+                            <strong>Please don't sign up with your work calendar</strong> or any account 
+                            you're concerned about. Use a personal calendar you're comfortable experimenting with.
+                        </p>
+                        <p>
+                            <strong>Beta test at your own risk.</strong>
                         </p>
                     </div>
 

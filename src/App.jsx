@@ -879,9 +879,11 @@ function App() {
             {/* Hero Section - Show when not logged in */}
             {!activeAccount && (
               <div className="hero-section">
-                <div className="vibe-badge">
-                  <span className="vibe-icon">⚡</span> Vibe coded in 48 hours
-                </div>
+                <a href="/story" className="vibe-badge-link">
+                  <div className="vibe-badge">
+                    <span className="vibe-icon">⚡</span> Vibe coded in 48 hours — read the story
+                  </div>
+                </a>
                 <h1 className="hero-title">
                   Schedule Across Timezones.<br />
                   <span className="hero-highlight">Respect Everyone's Hours.</span>

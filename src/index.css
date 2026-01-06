@@ -137,6 +137,18 @@ body {
 }
 
 /* Vibe Badge */
+.vibe-badge-link {
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 1.5rem;
+}
+
+.vibe-badge-link:hover .vibe-badge {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(245, 158, 11, 0.25));
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-1px);
+}
+
 .vibe-badge {
   display: inline-flex;
   align-items: center;
@@ -147,8 +159,8 @@ body {
   border-radius: 20px;
   font-size: 0.8rem;
   color: #a78bfa;
-  margin-bottom: 1.5rem;
   font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .vibe-icon {
@@ -2322,6 +2334,39 @@ label {
 }
 
 .story-highlight p:last-child {
+  margin-bottom: 0;
+}
+
+.security-list {
+  margin: 1rem 0 1.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.security-list li {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.story-warning {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-md);
+  padding: 1.5rem 2rem;
+  margin: 2rem 0;
+}
+
+.story-warning h3 {
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+  color: #fca5a5;
+}
+
+.story-warning p {
+  font-size: 0.95rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.story-warning p:last-child {
   margin-bottom: 0;
 }
 
