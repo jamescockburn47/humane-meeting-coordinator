@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 
-// Beta invite code - can be overridden via environment variable
-const BETA_CODE = import.meta.env.VITE_BETA_CODE || 'HUMANE100';
+// Beta access is now controlled entirely through admin approval
+// No invite codes - everyone must request and be approved
 
 export function Sidebar({ 
     activeView, 
@@ -22,38 +22,35 @@ export function Sidebar({
     onTestCalendar
 }) {
     const [hasBetaAccess, setHasBetaAccess] = useState(false);
-    const [betaCodeInput, setBetaCodeInput] = useState('');
     const [betaError, setBetaError] = useState('');
     const [showRequestForm, setShowRequestForm] = useState(false);
-    const [showCodeInput, setShowCodeInput] = useState(false);
     const [requestForm, setRequestForm] = useState({ name: '', email: '', reason: '', provider: '' });
     const [requestStatus, setRequestStatus] = useState(null); // 'sending', 'sent', 'error'
 
-    // Check localStorage for existing beta access OR existing user session
+    // Check if user has been approved - only grant access if explicitly approved
     useEffect(() => {
-        const savedAccess = localStorage.getItem('hasBetaAccess');
-        const existingSession = localStorage.getItem('userSession');
-        
-        // Grant beta access if they have the flag OR if they were already logged in before
-        if (savedAccess === 'true' || existingSession) {
-            setHasBetaAccess(true);
-            // Also set the flag so they keep access even if they log out
-            if (!savedAccess) {
-                localStorage.setItem('hasBetaAccess', 'true');
+        const checkApproval = async () => {
+            const existingSession = localStorage.getItem('userSession');
+            if (existingSession) {
+                try {
+                    const session = JSON.parse(existingSession);
+                    // Check if this user is approved in the database
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('is_approved')
+                        .eq('email', session.username)
+                        .single();
+                    
+                    if (profile?.is_approved === true) {
+                        setHasBetaAccess(true);
+                    }
+                } catch (e) {
+                    console.log('Could not verify approval status');
+                }
             }
-        }
+        };
+        checkApproval();
     }, []);
-
-    const handleBetaCodeSubmit = () => {
-        if (betaCodeInput.trim().toUpperCase() === BETA_CODE) {
-            setHasBetaAccess(true);
-            localStorage.setItem('hasBetaAccess', 'true');
-            setBetaError('');
-        } else {
-            setBetaError('Invalid invite code');
-            setTimeout(() => setBetaError(''), 3000);
-        }
-    };
 
     // Submit beta access request
     const handleRequestAccess = async () => {
@@ -302,34 +299,6 @@ export function Sidebar({
                                     <div className="beta-error">{betaError}</div>
                                 )}
                             </div>
-                        ) : showCodeInput ? (
-                            <div className="beta-code-section">
-                                <input
-                                    type="text"
-                                    placeholder="Enter invite code"
-                                    value={betaCodeInput}
-                                    onChange={(e) => setBetaCodeInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleBetaCodeSubmit()}
-                                    className="beta-code-input"
-                                />
-                                <button 
-                                    onClick={handleBetaCodeSubmit}
-                                    className="btn-ghost"
-                                    style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
-                                >
-                                    Unlock
-                                </button>
-                                <button 
-                                    onClick={() => setShowCodeInput(false)}
-                                    className="btn-ghost"
-                                    style={{ width: '100%', fontSize: '0.75rem', marginTop: '0.5rem' }}
-                                >
-                                    ← Back
-                                </button>
-                                {betaError && (
-                                    <div className="beta-error">{betaError}</div>
-                                )}
-                            </div>
                         ) : (
                             <div className="beta-options">
                                 <button 
@@ -339,13 +308,9 @@ export function Sidebar({
                                 >
                                     Request Beta Access
                                 </button>
-                                <button 
-                                    onClick={() => setShowCodeInput(true)}
-                                    className="btn-ghost"
-                                    style={{ width: '100%', fontSize: '0.8rem' }}
-                                >
-                                    I have an invite code
-                                </button>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
+                                    Each request is reviewed individually
+                                </p>
                             </div>
                         )}
 
