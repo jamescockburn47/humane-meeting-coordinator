@@ -215,7 +215,7 @@ export function Sidebar({
                 {/* Feedback button for logged-in users */}
                 {user && (
                     <a
-                        href="https://forms.gle/YOUR_GOOGLE_FORM_ID"
+                        href="https://docs.google.com/forms/d/e/1FAIpQLSd1JjZjqcJgURJ-6YLYz4hC0VTJxw-e7jIBUoXZrC35DNL7Ow/viewform"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="feedback-link"

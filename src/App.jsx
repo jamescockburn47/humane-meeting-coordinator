@@ -1386,7 +1386,7 @@ function App() {
                   <p>Thank you for testing Humane Calendar. Your feedback shapes the product.</p>
                   <div className="feedback-actions">
                     <a 
-                      href="https://forms.gle/YOUR_GOOGLE_FORM_ID" 
+                      href="https://docs.google.com/forms/d/e/1FAIpQLSd1JjZjqcJgURJ-6YLYz4hC0VTJxw-e7jIBUoXZrC35DNL7Ow/viewform" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="btn-primary"
