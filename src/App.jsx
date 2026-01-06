@@ -992,7 +992,7 @@ function App() {
             </div>
             
             <p className="contact-note">
-              Questions? Email <a href="mailto:james@cockburn.io">james@cockburn.io</a>
+              Questions? Email <a href="mailto:humanecalendar@gmail.com">humanecalendar@gmail.com</a>
             </p>
           </div>
         </div>
@@ -1394,7 +1394,7 @@ function App() {
                       📝 Send Feedback
                     </a>
                     <a 
-                      href="mailto:james@cockburn.io?subject=Humane Calendar Beta Feedback" 
+                      href="mailto:humanecalendar@gmail.com?subject=Humane Calendar Beta Feedback" 
                       className="btn-ghost"
                     >
                       ✉️ Email Directly
