@@ -15,6 +15,7 @@ import { TermsOfService } from './components/TermsOfService';
 import { AdminDashboard } from './components/AdminDashboard';
 import { JoinGroupPage } from './components/JoinGroupPage';
 import { HowItWorks } from './components/HowItWorks';
+import { StoryPage } from './components/StoryPage';
 import { SchedulingAssistant } from './components/SchedulingAssistant';
 import { AvailabilityWizard } from './components/AvailabilityWizard';
 
@@ -82,6 +83,12 @@ function App() {
     // Check for terms of service page
     if (path === '/terms' || path === '/terms/') {
       setView('terms');
+      return;
+    }
+    
+    // Check for story page
+    if (path === '/story' || path === '/story/' || path === '/about') {
+      setView('story');
       return;
     }
   }, []);
@@ -768,6 +775,11 @@ function App() {
         }}
       />
     );
+  }
+
+  // Show standalone story page if URL is /story
+  if (view === 'story') {
+    return <StoryPage />;
   }
 
   // Show join page if there's an invite code in URL

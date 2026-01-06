@@ -2220,6 +2220,167 @@ label {
   margin-bottom: 0 !important;
 }
 
+/* ==========================================
+   STORY PAGE (Standalone)
+   ========================================== */
+
+.story-page {
+  min-height: 100vh;
+  background: var(--bg-app);
+}
+
+.story-page-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sidebar);
+}
+
+.story-back-link {
+  display: inline-block;
+}
+
+.story-logo {
+  height: 48px;
+  width: auto;
+}
+
+.story-page-content {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.story-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(245, 158, 11, 0.15));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 0.5rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: #a78bfa;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.story-page-content h1 {
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  margin: 0 0 2rem 0;
+  color: var(--text-main);
+}
+
+.story-intro {
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.story-intro .story-lead {
+  font-size: 1.35rem;
+  color: var(--primary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.story-body h2 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  margin: 2.5rem 0 1rem 0;
+  color: var(--text-main);
+}
+
+.story-body h2:first-child {
+  margin-top: 0;
+}
+
+.story-body p {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text-main);
+  margin: 0 0 1.25rem 0;
+}
+
+.story-highlight {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(245, 158, 11, 0.08));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-md);
+  padding: 1.5rem 2rem;
+  margin: 2rem 0;
+}
+
+.story-highlight h3 {
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+  color: #a78bfa;
+}
+
+.story-highlight p {
+  font-size: 0.95rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.story-highlight p:last-child {
+  margin-bottom: 0;
+}
+
+.story-signature-box {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.story-signature-box .story-signature {
+  font-size: 1.1rem !important;
+  color: var(--text-main) !important;
+  line-height: 1.6;
+  margin: 0 !important;
+}
+
+.story-role {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.story-cta {
+  display: flex;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .story-page-content {
+    padding: 2rem 1rem;
+  }
+  
+  .story-page-content h1 {
+    font-size: 1.75rem;
+  }
+  
+  .story-intro .story-lead {
+    font-size: 1.1rem;
+  }
+  
+  .story-body p {
+    font-size: 1rem;
+  }
+  
+  .story-cta {
+    flex-direction: column;
+  }
+}
+
 .highlight-section {
   background: linear-gradient(135deg, var(--surface), var(--surface-hover));
   padding: 1.5rem;

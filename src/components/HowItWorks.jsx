@@ -278,42 +278,14 @@ export function HowItWorks({ isStandalone = false, onClose }) {
                 <a href="/privacy" className="privacy-link">Read our full Privacy Policy</a>
             </div>
 
-            {/* The Story */}
-            <div className="how-section story-section">
-                <h3>The Story</h3>
-                <div className="story-content">
-                    <p className="story-lead">
-                        <strong>Built by a lawyer who doesn't write code.</strong>
-                    </p>
-                    <p>
-                        I'm a legal tech advisor based in London. The global legal AI community is incredibly 
-                        enthusiastic — I found myself in Slack groups, Discord channels, and WhatsApp threads 
-                        with people from Sydney to San Francisco, all wanting to jump on calls.
-                    </p>
-                    <p>
-                        But coordinating times was a nightmare. Calendly doesn't work when you're juggling 
-                        five different timezones and everyone has day jobs. When2Meet shows the overlap 
-                        but doesn't send the invite. I was spending more time scheduling than talking.
-                    </p>
-                    <p>
-                        So I did what any reasonable person would do: I described my problem to an AI 
-                        and asked it to build me a solution. <strong>48 hours later, Humane Calendar existed.</strong>
-                    </p>
-                    <p className="story-vibe">
-                        This is vibe coding — using AI to fix real problems, fast. No CS degree required. 
-                        Just a clear problem and the stubbornness to keep prompting until it works.
-                    </p>
-                    <p className="story-signature">
-                        — James, London
-                    </p>
-                </div>
-            </div>
-
             {/* CTA */}
             <div className="how-cta">
                 <h3>Ready to schedule like a human?</h3>
                 <p className="cta-tagline">Free for individuals and small teams.</p>
-                <a href="/" className="btn-primary btn-large">Get Started</a>
+                <div className="cta-buttons">
+                    <a href="/" className="btn-primary btn-large">Get Started</a>
+                    <a href="/story" className="btn-ghost">Read the Story</a>
+                </div>
             </div>
         </>
     );
