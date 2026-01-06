@@ -19,7 +19,8 @@ export function Sidebar({
     isOpen,
     onShowPrivacy,
     onShowAdmin,
-    onTestCalendar
+    onTestCalendar,
+    hasInviteLink = false  // Only allow guest mode if they came from an invite link
 }) {
     const [hasBetaAccess, setHasBetaAccess] = useState(false);
     const [betaError, setBetaError] = useState('');
@@ -314,15 +315,20 @@ export function Sidebar({
                             </div>
                         )}
 
-                        <div className="divider-text">
-                            <span>or</span>
-                        </div>
-                        <button onClick={onGuestJoin} className="btn-ghost guest-btn">
-                            Continue as Guest
-                        </button>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.25rem' }}>
-                            Guest mode works for everyone!
-                        </p>
+                        {/* Guest mode only available via invite links */}
+                        {hasInviteLink && (
+                            <>
+                                <div className="divider-text">
+                                    <span>or join via invite</span>
+                                </div>
+                                <button onClick={onGuestJoin} className="btn-ghost guest-btn">
+                                    Continue as Guest
+                                </button>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.25rem' }}>
+                                    Guests can join groups but don't get beta tester status.
+                                </p>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

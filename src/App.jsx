@@ -1042,6 +1042,7 @@ function App() {
         onGuestJoin={() => setShowGuestModal(true)}
         calendarConnected={calendarConnected}
         onConnectCalendar={handleConnectCalendar}
+        hasInviteLink={!!joinInviteCode}
         isOpen={sidebarOpen}
         onShowPrivacy={() => setShowPrivacyPolicy(true)}
         onShowAdmin={() => setShowAdminDashboard(true)}
@@ -1352,10 +1353,21 @@ function App() {
 
                 <div className="card">
                   <h3>Quick Actions</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
-                    <button className="btn-primary" onClick={handleCreateGroup}>+ Create New Group</button>
-                    <button className="btn-ghost" onClick={handleJoinGroup}>Join Group by ID</button>
-                  </div>
+                  {activeAccount?.provider === 'guest' ? (
+                    <div style={{ marginTop: '1rem' }}>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                        You're in guest mode. You can view and participate in groups you've been invited to.
+                      </p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        To create your own groups and access full features, <a href="/" onClick={(e) => { e.preventDefault(); handleLogout(); }}>request beta access</a>.
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+                      <button className="btn-primary" onClick={handleCreateGroup}>+ Create New Group</button>
+                      <button className="btn-ghost" onClick={handleJoinGroup}>Join Group by ID</button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

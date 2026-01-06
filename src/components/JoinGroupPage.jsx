@@ -540,6 +540,10 @@ export function JoinGroupPage({
                         <p className="privacy-note">
                             We only access your busy/free times. Event details remain private.
                         </p>
+                        <p className="guest-note" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.5rem' }}>
+                            Guest mode lets you join this group. To create your own groups and access all features, 
+                            you'll need to <a href="/">request beta access</a>.
+                        </p>
                     </div>
                 )}
             </div>
