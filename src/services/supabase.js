@@ -48,6 +48,63 @@ export async function getProfile(email) {
 }
 
 /**
+ * Check if a user is approved for the beta program.
+ * Returns: { approved: boolean, pending: boolean, rejected: boolean, limitReached: boolean }
+ */
+export async function checkApprovalStatus(email) {
+    const profile = await getProfile(email);
+    
+    if (!profile) {
+        // User doesn't exist yet - check if limits would allow them
+        return { approved: false, pending: false, rejected: false, newUser: true };
+    }
+    
+    return {
+        approved: profile.is_approved === true,
+        pending: profile.is_approved === null,
+        rejected: profile.is_approved === false,
+        newUser: false
+    };
+}
+
+/**
+ * Check beta limits for a specific provider
+ */
+export async function checkBetaLimits() {
+    const GOOGLE_LIMIT = 50;
+    const MICROSOFT_LIMIT = 50;
+    
+    const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('email, is_approved');
+    
+    if (error) return { googleFull: false, microsoftFull: false };
+    
+    let googleApproved = 0;
+    let microsoftApproved = 0;
+    
+    profiles.forEach(p => {
+        if (p.is_approved !== true) return;
+        const email = p.email?.toLowerCase() || '';
+        if (email.includes('@gmail.com') || email.includes('@googlemail.com')) {
+            googleApproved++;
+        } else if (email.includes('@outlook.') || email.includes('@hotmail.') || 
+                   email.includes('@live.') || email.includes('@msn.')) {
+            microsoftApproved++;
+        }
+    });
+    
+    return {
+        googleApproved,
+        microsoftApproved,
+        googleFull: googleApproved >= GOOGLE_LIMIT,
+        microsoftFull: microsoftApproved >= MICROSOFT_LIMIT,
+        googleLimit: GOOGLE_LIMIT,
+        microsoftLimit: MICROSOFT_LIMIT
+    };
+}
+
+/**
  * Generates a short, readable invite code (6 characters)
  */
 function generateInviteCode() {

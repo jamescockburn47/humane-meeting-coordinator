@@ -5711,3 +5711,206 @@ label {
   margin: 0;
   font-style: italic;
 }
+
+/* === PENDING APPROVAL PAGE === */
+.pending-approval-page {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-app) 0%, #0a1628 100%);
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.pending-approval-card {
+  max-width: 500px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.pending-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.pending-approval-card h1 {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  color: var(--primary);
+  margin: 0 0 1rem 0;
+}
+
+.pending-message {
+  font-size: 1rem;
+  color: var(--text-main);
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+}
+
+.pending-detail {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.beta-progress {
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.beta-progress-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 0.25rem 0;
+}
+
+.beta-progress-item .full {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.pending-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 1.5rem;
+  margin-top: 1rem;
+}
+
+.expand-note {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0 0 1.25rem 0;
+  line-height: 1.5;
+}
+
+.pending-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.pending-actions .btn-ghost {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.contact-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.contact-note a {
+  color: var(--primary);
+}
+
+/* === ADMIN APPROVAL BUTTONS === */
+.btn-approve {
+  background: #22c55e;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-approve:hover {
+  background: #16a34a;
+}
+
+.btn-approve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-reject {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-reject:hover {
+  background: #dc2626;
+}
+
+.btn-reject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pending-approvals-section {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.pending-approvals-section h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
+.pending-badge {
+  font-size: 0.7rem;
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--primary);
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+
+.status-approved {
+  color: #22c55e;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-rejected {
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.rejected-row {
+  opacity: 0.5;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}

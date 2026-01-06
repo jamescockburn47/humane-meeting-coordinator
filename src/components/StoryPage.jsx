@@ -187,6 +187,9 @@ export function StoryPage() {
                             <a href="https://www.linkedin.com/in/james-cockburn/" target="_blank" rel="noopener noreferrer" className="author-link">
                                 💼 LinkedIn
                             </a>
+                            <a href="https://github.com/jamescockburn47/humane-meeting-coordinator" target="_blank" rel="noopener noreferrer" className="author-link">
+                                📦 GitHub
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -194,6 +197,9 @@ export function StoryPage() {
                 <div className="story-cta">
                     <a href="/" className="btn-primary btn-large">Try Humane Calendar</a>
                     <a href="/how-it-works" className="btn-ghost">See How It Works</a>
+                    <a href="https://github.com/jamescockburn47/humane-meeting-coordinator" target="_blank" rel="noopener noreferrer" className="btn-ghost">
+                        View Source on GitHub
+                    </a>
                 </div>
             </div>
         </div>

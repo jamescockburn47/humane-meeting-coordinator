@@ -28,11 +28,15 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         availabilityCache: { count: 0, error: null }
     });
     const [betaStats, setBetaStats] = useState({
-        google: { count: 0, users: [] },
-        microsoft: { count: 0, users: [] },
-        guest: { count: 0, users: [] }
+        google: { count: 0, approved: 0, pending: 0, users: [] },
+        microsoft: { count: 0, approved: 0, pending: 0, users: [] },
+        guest: { count: 0, approved: 0, pending: 0, users: [] }
     });
+    const [pendingUsers, setPendingUsers] = useState([]);
+    const [approvalLoading, setApprovalLoading] = useState({});
     const [exportLoading, setExportLoading] = useState(false);
+    const GOOGLE_LIMIT = 50;
+    const MICROSOFT_LIMIT = 50;
     const [systemStatus, setSystemStatus] = useState({
         supabase: { status: 'checking', latency: null },
         google: { status: 'unknown' },
@@ -199,10 +203,10 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         addLog('Fetching beta tester statistics...', 'info');
         
         try {
-            // Get all profiles with their info
+            // Get all profiles with their info including approval status
             const { data: profiles, error } = await supabase
                 .from('profiles')
-                .select('email, display_name, timezone, created_at')
+                .select('email, display_name, timezone, created_at, is_approved, approved_at, approved_by')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -211,30 +215,161 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
             const googleUsers = [];
             const microsoftUsers = [];
             const guestUsers = [];
+            const pending = [];
 
             profiles.forEach(p => {
                 const email = p.email?.toLowerCase() || '';
-                if (email.includes('@gmail.com') || email.includes('@googlemail.com')) {
-                    googleUsers.push(p);
-                } else if (email.includes('@outlook.') || email.includes('@hotmail.') || 
-                           email.includes('@live.') || email.includes('@msn.')) {
-                    microsoftUsers.push(p);
+                const isGoogle = email.includes('@gmail.com') || email.includes('@googlemail.com');
+                const isMicrosoft = email.includes('@outlook.') || email.includes('@hotmail.') || 
+                                    email.includes('@live.') || email.includes('@msn.');
+                
+                const userData = { ...p, provider: isGoogle ? 'google' : isMicrosoft ? 'microsoft' : 'other' };
+                
+                if (isGoogle) {
+                    googleUsers.push(userData);
+                } else if (isMicrosoft) {
+                    microsoftUsers.push(userData);
                 } else {
-                    // Could be work email (Google Workspace) or guest - treat as "other"
-                    guestUsers.push(p);
+                    guestUsers.push(userData);
+                }
+                
+                // Track pending users separately
+                if (p.is_approved === null) {
+                    pending.push(userData);
                 }
             });
 
             setBetaStats({
-                google: { count: googleUsers.length, users: googleUsers },
-                microsoft: { count: microsoftUsers.length, users: microsoftUsers },
-                guest: { count: guestUsers.length, users: guestUsers }
+                google: { 
+                    count: googleUsers.length, 
+                    approved: googleUsers.filter(u => u.is_approved === true).length,
+                    pending: googleUsers.filter(u => u.is_approved === null).length,
+                    users: googleUsers 
+                },
+                microsoft: { 
+                    count: microsoftUsers.length, 
+                    approved: microsoftUsers.filter(u => u.is_approved === true).length,
+                    pending: microsoftUsers.filter(u => u.is_approved === null).length,
+                    users: microsoftUsers 
+                },
+                guest: { 
+                    count: guestUsers.length, 
+                    approved: guestUsers.filter(u => u.is_approved === true).length,
+                    pending: guestUsers.filter(u => u.is_approved === null).length,
+                    users: guestUsers 
+                }
             });
+            
+            setPendingUsers(pending);
 
-            addLog(`Beta breakdown: ${googleUsers.length} Google, ${microsoftUsers.length} Microsoft, ${guestUsers.length} Other`, 'success');
+            addLog(`Beta breakdown: ${googleUsers.filter(u => u.is_approved).length}/${GOOGLE_LIMIT} Google, ${microsoftUsers.filter(u => u.is_approved).length}/${MICROSOFT_LIMIT} Microsoft, ${pending.length} pending`, 'success');
         } catch (e) {
             addLog(`Beta stats failed: ${e.message}`, 'error');
         }
+    };
+
+    // Approve a user
+    const handleApprove = async (email) => {
+        setApprovalLoading(prev => ({ ...prev, [email]: 'approving' }));
+        try {
+            // Check limits before approving
+            const isGoogle = email.toLowerCase().includes('@gmail.com') || email.toLowerCase().includes('@googlemail.com');
+            const isMicrosoft = email.toLowerCase().includes('@outlook.') || email.toLowerCase().includes('@hotmail.') || 
+                                email.toLowerCase().includes('@live.') || email.toLowerCase().includes('@msn.');
+            
+            if (isGoogle && betaStats.google.approved >= GOOGLE_LIMIT) {
+                alert(`Cannot approve: Google user limit (${GOOGLE_LIMIT}) reached.`);
+                setApprovalLoading(prev => ({ ...prev, [email]: null }));
+                return;
+            }
+            if (isMicrosoft && betaStats.microsoft.approved >= MICROSOFT_LIMIT) {
+                alert(`Cannot approve: Microsoft user limit (${MICROSOFT_LIMIT}) reached.`);
+                setApprovalLoading(prev => ({ ...prev, [email]: null }));
+                return;
+            }
+            
+            const { error } = await supabase
+                .from('profiles')
+                .update({ 
+                    is_approved: true, 
+                    approved_at: new Date().toISOString(),
+                    approved_by: currentUserEmail
+                })
+                .eq('email', email);
+
+            if (error) throw error;
+
+            addLog(`✅ Approved: ${email}`, 'success');
+            await fetchBetaStats(); // Refresh stats
+        } catch (e) {
+            addLog(`Failed to approve ${email}: ${e.message}`, 'error');
+            alert('Approval failed: ' + e.message);
+        } finally {
+            setApprovalLoading(prev => ({ ...prev, [email]: null }));
+        }
+    };
+
+    // Reject a user
+    const handleReject = async (email) => {
+        setApprovalLoading(prev => ({ ...prev, [email]: 'rejecting' }));
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ 
+                    is_approved: false, 
+                    approved_at: new Date().toISOString(),
+                    approved_by: currentUserEmail
+                })
+                .eq('email', email);
+
+            if (error) throw error;
+
+            addLog(`❌ Rejected: ${email}`, 'info');
+            await fetchBetaStats(); // Refresh stats
+        } catch (e) {
+            addLog(`Failed to reject ${email}: ${e.message}`, 'error');
+            alert('Rejection failed: ' + e.message);
+        } finally {
+            setApprovalLoading(prev => ({ ...prev, [email]: null }));
+        }
+    };
+
+    // Bulk approve all pending
+    const handleBulkApprove = async () => {
+        const confirmed = confirm(`Approve all ${pendingUsers.length} pending users? This will check limits.`);
+        if (!confirmed) return;
+        
+        let approved = 0;
+        let skipped = 0;
+        
+        for (const user of pendingUsers) {
+            const isGoogle = user.provider === 'google';
+            const isMicrosoft = user.provider === 'microsoft';
+            
+            // Check limits
+            if (isGoogle && (betaStats.google.approved + approved) >= GOOGLE_LIMIT) {
+                skipped++;
+                continue;
+            }
+            if (isMicrosoft && (betaStats.microsoft.approved + approved) >= MICROSOFT_LIMIT) {
+                skipped++;
+                continue;
+            }
+            
+            const { error } = await supabase
+                .from('profiles')
+                .update({ 
+                    is_approved: true, 
+                    approved_at: new Date().toISOString(),
+                    approved_by: currentUserEmail
+                })
+                .eq('email', user.email);
+
+            if (!error) approved++;
+        }
+        
+        addLog(`Bulk approved: ${approved} users, ${skipped} skipped (limit reached)`, 'success');
+        await fetchBetaStats();
     };
 
     // Export beta testers to CSV
@@ -564,14 +699,25 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                 <div className="admin-section beta-section">
                     <div className="section-header-row">
                         <h3>🧪 Beta Tester Management</h3>
-                        <button 
-                            className="btn-primary" 
-                            onClick={exportBetaTesters}
-                            disabled={exportLoading}
-                            style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
-                        >
-                            {exportLoading ? '📥 Exporting...' : '📥 Export CSV'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {pendingUsers.length > 0 && (
+                                <button 
+                                    className="btn-ghost" 
+                                    onClick={handleBulkApprove}
+                                    style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                                >
+                                    ✅ Approve All ({pendingUsers.length})
+                                </button>
+                            )}
+                            <button 
+                                className="btn-primary" 
+                                onClick={exportBetaTesters}
+                                disabled={exportLoading}
+                                style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                            >
+                                {exportLoading ? '📥 Exporting...' : '📥 Export CSV'}
+                            </button>
+                        </div>
                     </div>
                     
                     <div className="beta-limits">
@@ -581,18 +727,21 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                                 <span>Google Users</span>
                             </div>
                             <div className="limit-count">
-                                <span className={`count ${betaStats.google.count >= 50 ? 'at-limit' : ''}`}>
-                                    {betaStats.google.count}
+                                <span className={`count ${betaStats.google.approved >= GOOGLE_LIMIT ? 'at-limit' : ''}`}>
+                                    {betaStats.google.approved}
                                 </span>
-                                <span className="limit">/ 50</span>
+                                <span className="limit">/ {GOOGLE_LIMIT}</span>
+                                {betaStats.google.pending > 0 && (
+                                    <span className="pending-badge">+{betaStats.google.pending} pending</span>
+                                )}
                             </div>
                             <div className="limit-bar">
                                 <div 
                                     className="limit-fill google" 
-                                    style={{ width: `${Math.min(100, (betaStats.google.count / 50) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, (betaStats.google.approved / GOOGLE_LIMIT) * 100)}%` }}
                                 />
                             </div>
-                            {betaStats.google.count >= 50 && (
+                            {betaStats.google.approved >= GOOGLE_LIMIT && (
                                 <div className="limit-warning">⚠️ Limit reached!</div>
                             )}
                         </div>
@@ -603,18 +752,21 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                                 <span>Microsoft Users</span>
                             </div>
                             <div className="limit-count">
-                                <span className={`count ${betaStats.microsoft.count >= 50 ? 'at-limit' : ''}`}>
-                                    {betaStats.microsoft.count}
+                                <span className={`count ${betaStats.microsoft.approved >= MICROSOFT_LIMIT ? 'at-limit' : ''}`}>
+                                    {betaStats.microsoft.approved}
                                 </span>
-                                <span className="limit">/ 50</span>
+                                <span className="limit">/ {MICROSOFT_LIMIT}</span>
+                                {betaStats.microsoft.pending > 0 && (
+                                    <span className="pending-badge">+{betaStats.microsoft.pending} pending</span>
+                                )}
                             </div>
                             <div className="limit-bar">
                                 <div 
                                     className="limit-fill microsoft" 
-                                    style={{ width: `${Math.min(100, (betaStats.microsoft.count / 50) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, (betaStats.microsoft.approved / MICROSOFT_LIMIT) * 100)}%` }}
                                 />
                             </div>
-                            {betaStats.microsoft.count >= 50 && (
+                            {betaStats.microsoft.approved >= MICROSOFT_LIMIT && (
                                 <div className="limit-warning">⚠️ Limit reached!</div>
                             )}
                         </div>
@@ -625,8 +777,11 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                                 <span>Other/Guests</span>
                             </div>
                             <div className="limit-count">
-                                <span className="count">{betaStats.guest.count}</span>
+                                <span className="count">{betaStats.guest.approved}</span>
                                 <span className="limit">/ ∞</span>
+                                {betaStats.guest.pending > 0 && (
+                                    <span className="pending-badge">+{betaStats.guest.pending} pending</span>
+                                )}
                             </div>
                             <div className="limit-bar">
                                 <div 
@@ -637,8 +792,62 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                         </div>
                     </div>
 
+                    {/* PENDING APPROVALS QUEUE */}
+                    {pendingUsers.length > 0 && (
+                        <div className="pending-approvals-section">
+                            <h4>⏳ Pending Approvals ({pendingUsers.length})</h4>
+                            <div className="data-table-container" style={{ marginTop: '0.5rem' }}>
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Email</th>
+                                            <th>Name</th>
+                                            <th>Provider</th>
+                                            <th>Signed Up</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {pendingUsers.map(u => (
+                                            <tr key={u.email}>
+                                                <td>{u.email}</td>
+                                                <td>{u.display_name || '-'}</td>
+                                                <td>
+                                                    {u.provider === 'google' ? '🔵 Google' :
+                                                     u.provider === 'microsoft' ? '🟢 Microsoft' :
+                                                     '⚪ Other'}
+                                                </td>
+                                                <td>{u.created_at ? new Date(u.created_at).toLocaleString() : '-'}</td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                        <button
+                                                            onClick={() => handleApprove(u.email)}
+                                                            disabled={approvalLoading[u.email]}
+                                                            className="btn-approve"
+                                                            title="Approve"
+                                                        >
+                                                            {approvalLoading[u.email] === 'approving' ? '...' : '✓'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleReject(u.email)}
+                                                            disabled={approvalLoading[u.email]}
+                                                            className="btn-reject"
+                                                            title="Reject"
+                                                        >
+                                                            {approvalLoading[u.email] === 'rejecting' ? '...' : '✗'}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     <details className="beta-user-list">
-                        <summary>View All Beta Testers ({stats.profiles.count})</summary>
+                        <summary>View All Users ({stats.profiles.count})</summary>
                         <div className="data-table-container" style={{ marginTop: '1rem' }}>
                             <table className="admin-table">
                                 <thead>
@@ -646,18 +855,28 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                                         <th>Email</th>
                                         <th>Name</th>
                                         <th>Provider</th>
+                                        <th>Status</th>
                                         <th>Sign-up</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {[...betaStats.google.users, ...betaStats.microsoft.users, ...betaStats.guest.users].map(u => (
-                                        <tr key={u.email}>
+                                        <tr key={u.email} className={u.is_approved === false ? 'rejected-row' : ''}>
                                             <td>{u.email}</td>
                                             <td>{u.display_name || '-'}</td>
                                             <td>
-                                                {u.email?.includes('@gmail') || u.email?.includes('@googlemail') ? '🔵 Google' :
-                                                 u.email?.includes('@outlook') || u.email?.includes('@hotmail') || u.email?.includes('@live') ? '🟢 Microsoft' :
+                                                {u.provider === 'google' ? '🔵 Google' :
+                                                 u.provider === 'microsoft' ? '🟢 Microsoft' :
                                                  '⚪ Other'}
+                                            </td>
+                                            <td>
+                                                {u.is_approved === true ? (
+                                                    <span className="status-approved">✅ Approved</span>
+                                                ) : u.is_approved === false ? (
+                                                    <span className="status-rejected">❌ Rejected</span>
+                                                ) : (
+                                                    <span className="status-pending">⏳ Pending</span>
+                                                )}
                                             </td>
                                             <td>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
                                         </tr>

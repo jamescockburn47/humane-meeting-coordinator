@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-import { updateProfile, getProfile, createGroup, joinGroup, getGroupMembers, getBusySlotsForUsers, syncAvailability, supabase, deleteAllUserData, exportUserData } from "./services/supabase";
+import { updateProfile, getProfile, createGroup, joinGroup, getGroupMembers, getBusySlotsForUsers, syncAvailability, supabase, deleteAllUserData, exportUserData, checkApprovalStatus, checkBetaLimits } from "./services/supabase";
 import { findCommonHumaneSlots } from './services/scheduler';
 import { callMsGraph, findMeetingTimes, createMeeting } from './services/graph';
 import { fetchGoogleAvailability, createGoogleEvent } from './services/google';
@@ -58,6 +58,8 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [approvalStatus, setApprovalStatus] = useState(null); // { approved, pending, rejected, newUser }
+  const [betaLimits, setBetaLimits] = useState(null);
 
   // Check for special URLs on load (/join/:code, /privacy, /how-it-works)
   useEffect(() => {
@@ -129,6 +131,8 @@ function App() {
             if (profile.night_owl !== undefined) setNightOwl(profile.night_owl);
             // Calendar is connected if they logged in with OAuth provider
             setCalendarConnected(session.provider === 'microsoft' || session.provider === 'google');
+            // Check approval status
+            await checkUserApproval(session.username);
             fetchMyGroups(session.username);
           } else {
             // Profile gone, clear session
@@ -163,7 +167,7 @@ function App() {
       localStorage.setItem('userSession', JSON.stringify(msAccount));
       
       // Fetch Profile Logic - load saved preferences
-      getProfile(acc.username).then(profile => {
+      getProfile(acc.username).then(async (profile) => {
         if (profile) {
           // Load saved availability windows
           if (profile.humane_windows && profile.humane_windows.length > 0) {
@@ -173,7 +177,7 @@ function App() {
           if (profile.night_owl !== undefined) setNightOwl(profile.night_owl);
         } else {
           // Only create profile if it doesn't exist (first time user)
-          updateProfile(
+          await updateProfile(
             acc.username,
             acc.name,
             Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -182,6 +186,9 @@ function App() {
             [{ start: "09:00", end: "17:00", type: "weekday" }]
           );
         }
+        
+        // Check approval status
+        await checkUserApproval(acc.username);
       });
       fetchMyGroups(acc.username);
     }
@@ -196,6 +203,20 @@ function App() {
       .eq('profile_email', email);
 
     if (data) setGroups(data.map(d => d.groups));
+  };
+
+  // Check user's approval status after login
+  const checkUserApproval = async (email) => {
+    const status = await checkApprovalStatus(email);
+    setApprovalStatus(status);
+    
+    // Also fetch beta limits if user is pending or new
+    if (status.pending || status.newUser) {
+      const limits = await checkBetaLimits();
+      setBetaLimits(limits);
+    }
+    
+    return status;
   };
 
   const handleLogin = () => {
@@ -244,7 +265,7 @@ function App() {
       if (existingProfile.timezone) setTimezone(existingProfile.timezone);
       if (existingProfile.night_owl !== undefined) setNightOwl(existingProfile.night_owl);
     } else {
-      // First time user - create profile with defaults
+      // First time user - create profile with defaults (approval is NULL = pending)
       await updateProfile(
         googleUser.username, 
         googleUser.name, 
@@ -254,6 +275,10 @@ function App() {
         [{ start: "09:00", end: "17:00", type: "weekday" }]
       );
     }
+    
+    // Check approval status
+    await checkUserApproval(googleUser.username);
+    
     fetchMyGroups(googleUser.username);
   };
 
@@ -870,6 +895,86 @@ function App() {
     return <StoryPage />;
   }
 
+  // Show pending approval screen for unapproved users
+  if (activeAccount && approvalStatus && !approvalStatus.approved && activeAccount.provider !== 'guest') {
+    const isRejected = approvalStatus.rejected;
+    const isPending = approvalStatus.pending;
+    
+    return (
+      <div className="pending-approval-page">
+        <div className="pending-approval-card">
+          <div className="pending-icon">{isRejected ? '❌' : '⏳'}</div>
+          <h1>{isRejected ? 'Access Not Granted' : 'Awaiting Approval'}</h1>
+          
+          {isRejected ? (
+            <>
+              <p className="pending-message">
+                Unfortunately, your account wasn't approved for the current beta program.
+              </p>
+              <p className="pending-detail">
+                We're expanding access after the beta phase is complete. 
+                Thank you for your interest in Humane Calendar.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="pending-message">
+                Thank you for signing up! Your account is pending approval.
+              </p>
+              <p className="pending-detail">
+                We're running a closed beta with limited spots to ensure quality. 
+                You'll receive access once an admin reviews your registration.
+              </p>
+              {betaLimits && (
+                <div className="beta-progress">
+                  <div className="beta-progress-item">
+                    <span>Google users:</span>
+                    <span className={betaLimits.googleFull ? 'full' : ''}>
+                      {betaLimits.googleApproved} / {betaLimits.googleLimit}
+                      {betaLimits.googleFull && ' (Full)'}
+                    </span>
+                  </div>
+                  <div className="beta-progress-item">
+                    <span>Microsoft users:</span>
+                    <span className={betaLimits.microsoftFull ? 'full' : ''}>
+                      {betaLimits.microsoftApproved} / {betaLimits.microsoftLimit}
+                      {betaLimits.microsoftFull && ' (Full)'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          
+          <div className="pending-footer">
+            <p className="expand-note">
+              We plan to expand to additional users after the beta testing phase is complete. 
+              Your email ({activeAccount.username}) is on our waitlist.
+            </p>
+            
+            <div className="pending-actions">
+              <a 
+                href="https://github.com/jamescockburn47/humane-meeting-coordinator" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="btn-ghost"
+              >
+                View on GitHub
+              </a>
+              <button className="btn-ghost" onClick={handleLogout}>
+                Log Out
+              </button>
+            </div>
+            
+            <p className="contact-note">
+              Questions? Email <a href="mailto:james@cockburn.io">james@cockburn.io</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show join page if there's an invite code in URL
   if (joinInviteCode) {
     return (
@@ -1320,6 +1425,15 @@ function App() {
             <a href="/terms" className="footer-link">Terms of Service</a>
             <span className="footer-divider">•</span>
             <a href="/how-it-works" className="footer-link">How It Works</a>
+            <span className="footer-divider">•</span>
+            <a 
+              href="https://github.com/jamescockburn47/humane-meeting-coordinator" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="footer-link"
+            >
+              GitHub
+            </a>
           </div>
           <div className="footer-brand">
             © 2025 Humane Calendar
