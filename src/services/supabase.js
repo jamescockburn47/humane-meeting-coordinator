@@ -59,10 +59,47 @@ export async function checkApprovalStatus(email) {
         return { approved: false, pending: false, rejected: false, newUser: true };
     }
     
+    // If explicitly approved or rejected, return that status
+    if (profile.is_approved === true) {
+        return { approved: true, pending: false, rejected: false, newUser: false };
+    }
+    if (profile.is_approved === false) {
+        return { approved: false, pending: false, rejected: true, newUser: false };
+    }
+    
+    // is_approved is NULL - check if this is an existing active user (grandfathered in)
+    // Check if they have any group memberships or created groups
+    const { data: memberships } = await supabase
+        .from('group_members')
+        .select('id')
+        .eq('profile_email', email)
+        .limit(1);
+    
+    const { data: createdGroups } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('created_by', email)
+        .limit(1);
+    
+    const isExistingActiveUser = (memberships && memberships.length > 0) || 
+                                  (createdGroups && createdGroups.length > 0);
+    
+    if (isExistingActiveUser) {
+        // Auto-approve this existing user in the background
+        supabase.from('profiles').update({ 
+            is_approved: true, 
+            approved_at: new Date().toISOString(),
+            approved_by: 'auto-grandfathered'
+        }).eq('email', email).then(() => {});
+        
+        return { approved: true, pending: false, rejected: false, newUser: false };
+    }
+    
+    // Truly new/pending user
     return {
-        approved: profile.is_approved === true,
-        pending: profile.is_approved === null,
-        rejected: profile.is_approved === false,
+        approved: false,
+        pending: true,
+        rejected: false,
         newUser: false
     };
 }
