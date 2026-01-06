@@ -501,6 +501,235 @@ label {
   border-top: 1px dashed var(--border);
 }
 
+/* Results Summary - Clean, smart display */
+.results-summary {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.results-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.results-stats {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.stat-highlight {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.stat-warning {
+  color: var(--warning, #f59e0b);
+  font-weight: 600;
+}
+
+.stat-muted {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.results-section {
+  margin-bottom: 1.5rem;
+}
+
+.results-section:last-child {
+  margin-bottom: 0;
+}
+
+.results-section h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-note {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.day-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.day-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.day-label {
+  min-width: 100px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.time-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.time-chip {
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.time-chip.full {
+  background: rgba(218, 165, 32, 0.15);
+  color: var(--primary);
+  border: 1px solid rgba(218, 165, 32, 0.3);
+}
+
+.time-chip.full:hover {
+  background: rgba(218, 165, 32, 0.25);
+  transform: translateY(-1px);
+}
+
+.more-times {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.partial-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.partial-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warning, #f59e0b);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.partial-option:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: var(--warning, #f59e0b);
+}
+
+.partial-time {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.partial-time .time {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.partial-time .date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.partial-attendance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  padding: 0 1rem;
+}
+
+.partial-attendance .ratio {
+  font-weight: 600;
+  color: var(--warning, #f59e0b);
+}
+
+.partial-attendance .who-cant {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.btn-book-partial {
+  padding: 0.4rem 1rem;
+  background: var(--primary);
+  color: var(--bg-app);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-book-partial:hover {
+  opacity: 0.9;
+}
+
+.show-more-btn {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 1rem;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.show-more-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+@media (max-width: 640px) {
+  .day-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .day-label {
+    min-width: auto;
+  }
+  
+  .partial-option {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .partial-attendance {
+    padding: 0;
+  }
+  
+  .btn-book-partial {
+    width: 100%;
+  }
+}
+
 .slot-card {
   transition: all 0.2s ease;
   position: relative;

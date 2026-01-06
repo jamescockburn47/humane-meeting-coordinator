@@ -593,14 +593,18 @@ function App() {
     fetchMyGroups(activeAccount.username);
   };
 
-  const handleFindTimes = async (groupId, startStr, endStr, durationMinutes = 60) => {
+  const handleFindTimes = async (groupId, startStr, endStr, durationMinutes = 60, organizerEmail = null) => {
     setLoading(true);
     try {
       const members = await getGroupMembers(groupId);
       const memberEmails = members.map(m => m.email);
+      
+      // Use current user as organizer if not specified
+      const orgEmail = organizerEmail || activeAccount?.username;
 
       console.log("=== FIND TIMES DEBUG ===");
       console.log("Group ID:", groupId);
+      console.log("Organizer:", orgEmail);
       console.log("Date range:", startStr, "to", endStr);
       console.log("Duration:", durationMinutes, "minutes");
       console.log("Members found:", members.length);
@@ -615,14 +619,18 @@ function App() {
       const busySlots = await getBusySlotsForUsers(memberEmails, start, end);
       console.log("Busy slots fetched:", busySlots.length);
 
-      const slots = findCommonHumaneSlots(members, busySlots, startStr, endStr, durationMinutes);
+      // Pass organizer email to ensure their availability is required
+      const slots = findCommonHumaneSlots(members, busySlots, startStr, endStr, durationMinutes, {
+        organizerEmail: orgEmail
+      });
       console.log("Slots found:", slots.length);
       
       if (slots.length === 0) {
-        alert("No matching times found. This could mean:\n\n1. Members' availability windows don't overlap\n2. All overlapping times are during busy periods\n3. Members haven't set their availability windows\n\nCheck the browser console for detailed debugging info.");
+        alert("No times found where you (the organizer) are available.\n\nTry:\n1. Expanding your availability windows\n2. Extending the date range\n3. Checking your calendar isn't blocking all times");
       }
       
       setSuggestions(slots);
+      setLoading(false);
     } catch (e) {
       console.error("Find times error:", e);
       alert("Error finding times: " + e.message);

@@ -126,6 +126,133 @@ function InviteLinkCard({ groupName, inviteCode, groupId, startDate, endDate, du
     );
 }
 
+// Results Summary Component - Smart, clean display of scheduling results
+function ResultsSummary({ suggestions, members, onSelectSlot }) {
+    const [showAll, setShowAll] = useState(false);
+    
+    const fullMatches = suggestions.filter(s => s.isFullMatch);
+    const partialMatches = suggestions.filter(s => !s.isFullMatch);
+    
+    // Group full matches by day for cleaner display
+    const fullByDay = {};
+    fullMatches.forEach(slot => {
+        const dayKey = new Date(slot.start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        if (!fullByDay[dayKey]) fullByDay[dayKey] = [];
+        fullByDay[dayKey].push(slot);
+    });
+    
+    // Get best partial matches (highest attendance)
+    const bestPartials = partialMatches.slice(0, showAll ? 10 : 3);
+    
+    const hasFullMatches = fullMatches.length > 0;
+    const totalOptions = fullMatches.length + partialMatches.length;
+
+    return (
+        <div className="results-summary">
+            {/* Header with stats */}
+            <div className="results-header">
+                <div className="results-stats">
+                    {hasFullMatches ? (
+                        <>
+                            <span className="stat-highlight">✓ {fullMatches.length} times</span> when everyone can meet
+                        </>
+                    ) : (
+                        <>
+                            <span className="stat-warning">No times when everyone is free</span>
+                            {partialMatches.length > 0 && (
+                                <span className="stat-muted"> — {partialMatches.length} partial options below</span>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Full matches - grouped by day */}
+            {hasFullMatches && (
+                <div className="results-section results-full">
+                    <h4>Best Times (Everyone Available)</h4>
+                    <div className="day-groups">
+                        {Object.entries(fullByDay).slice(0, showAll ? undefined : 3).map(([day, slots]) => (
+                            <div key={day} className="day-group">
+                                <div className="day-label">{day}</div>
+                                <div className="time-chips">
+                                    {slots.slice(0, showAll ? 5 : 2).map((slot, i) => (
+                                        <button
+                                            key={i}
+                                            className="time-chip full"
+                                            onClick={() => onSelectSlot(slot)}
+                                        >
+                                            {new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </button>
+                                    ))}
+                                    {slots.length > (showAll ? 5 : 2) && (
+                                        <span className="more-times">+{slots.length - (showAll ? 5 : 2)}</span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {Object.keys(fullByDay).length > 3 && !showAll && (
+                        <button className="show-more-btn" onClick={() => setShowAll(true)}>
+                            Show all {fullMatches.length} options
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Partial matches - only if no full matches OR user wants to see more */}
+            {(!hasFullMatches || showAll) && partialMatches.length > 0 && (
+                <div className="results-section results-partial">
+                    <h4>
+                        Partial Availability
+                        <span className="section-note">Some members can't make these times</span>
+                    </h4>
+                    <div className="partial-list">
+                        {bestPartials.map((slot, i) => {
+                            const available = slot.availableMembers?.length || 0;
+                            const total = members.length;
+                            const unavailable = slot.unavailableMembers || [];
+                            
+                            return (
+                                <div 
+                                    key={i} 
+                                    className="partial-option"
+                                    onClick={() => onSelectSlot(slot)}
+                                >
+                                    <div className="partial-time">
+                                        <span className="time">{new Date(slot.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        <span className="date">{new Date(slot.start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                    </div>
+                                    <div className="partial-attendance">
+                                        <span className="ratio">{available}/{total}</span>
+                                        <span className="who-cant">
+                                            {unavailable.slice(0, 2).map(m => m.name).join(', ')}
+                                            {unavailable.length > 2 && ` +${unavailable.length - 2}`}
+                                        </span>
+                                    </div>
+                                    <button className="btn-book-partial">Book</button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {partialMatches.length > 3 && !showAll && (
+                        <button className="show-more-btn" onClick={() => setShowAll(true)}>
+                            Show all {partialMatches.length} partial options
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Collapse button */}
+            {showAll && totalOptions > 6 && (
+                <button className="show-more-btn" onClick={() => setShowAll(false)}>
+                    Show less
+                </button>
+            )}
+        </div>
+    );
+}
+
 // Slot Card Component - Shows available time with attendance info
 function SlotCard({ slot, onClick, members, showPartial = false }) {
     const date = new Date(slot.start);
@@ -506,33 +633,13 @@ export function GroupView({ group, currentUser, onFindTimes, suggestions, loadin
                 />
             )}
 
-            {/* Full Match Section */}
-            {suggestions.filter(s => s.isFullMatch).length > 0 && (
-                <div className="slots-section">
-                    <h4 className="slots-section-title">
-                        Everyone Available ({suggestions.filter(s => s.isFullMatch).length} times)
-                    </h4>
-                    <div className="grid-cols-2">
-                        {suggestions.filter(s => s.isFullMatch).slice(0, 10).map((slot, i) => (
-                            <SlotCard key={`full-${i}`} slot={slot} onClick={() => setBookingSlot(slot)} members={members} />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Partial Match Section - Only show if no full matches or explicitly viewing */}
-            {suggestions.filter(s => !s.isFullMatch).length > 0 && (
-                <div className="slots-section partial-section">
-                    <h4 className="slots-section-title">
-                        Partial Availability ({suggestions.filter(s => !s.isFullMatch).length} times)
-                        <span className="section-subtitle">Some members unavailable</span>
-                    </h4>
-                    <div className="grid-cols-2">
-                        {suggestions.filter(s => !s.isFullMatch).slice(0, 10).map((slot, i) => (
-                            <SlotCard key={`partial-${i}`} slot={slot} onClick={() => setBookingSlot(slot)} members={members} showPartial />
-                        ))}
-                    </div>
-                </div>
+            {/* Results Summary */}
+            {suggestions.length > 0 && (
+                <ResultsSummary 
+                    suggestions={suggestions} 
+                    members={members}
+                    onSelectSlot={(slot) => setBookingSlot(slot)}
+                />
             )}
 
             {!loading && suggestions.length === 0 && (

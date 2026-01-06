@@ -12,7 +12,10 @@ import { addMinutes } from 'date-fns';
  * NEW: Also returns partial attendance info for groups > 2 people
  */
 export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEndStr, durationMinutes, options = {}) {
-    const { includePartial = true, minAttendees = 2 } = options;
+    const { includePartial = true, minAttendees = 2, organizerEmail = null } = options;
+    
+    // Find the organizer if specified
+    const organizer = organizerEmail ? members.find(m => m.email === organizerEmail) : null;
     
     console.log("=== SCHEDULER DEBUG ===");
     console.log("Range:", rangeStartStr, "to", rangeEndStr);
@@ -52,12 +55,20 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
         // Check each member's availability for this slot
         const availableMembers = [];
         const unavailableMembers = [];
+        let organizerCanAttend = !organizer; // True if no organizer specified
 
         for (const member of members) {
             const humaneResult = isHumane(currentTime, slotEnd, member);
             const busyResult = isBusy(currentTime, slotEnd, member.email, busySlots);
             
-            if (humaneResult.humane && !busyResult) {
+            const canAttend = humaneResult.humane && !busyResult;
+            
+            // Track organizer availability
+            if (organizer && member.email === organizer.email) {
+                organizerCanAttend = canAttend;
+            }
+            
+            if (canAttend) {
                 availableMembers.push({
                     email: member.email,
                     name: member.name || member.email.split('@')[0]
@@ -71,7 +82,17 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
             }
         }
 
+        // Skip this slot entirely if organizer can't attend
+        if (!organizerCanAttend) {
+            currentTime = addMinutes(currentTime, step);
+            continue;
+        }
+
         const attendanceRatio = availableMembers.length / members.length;
+        
+        // Calculate quality score (lower is better)
+        // Prefer slots during business hours for most members
+        const qualityScore = calculateSlotQuality(currentTime, slotEnd, members);
 
         // Full match - everyone available
         if (availableMembers.length === members.length) {
@@ -82,10 +103,11 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
                 availableMembers,
                 unavailableMembers: [],
                 attendanceRatio: 1.0,
-                isFullMatch: true
+                isFullMatch: true,
+                qualityScore
             });
         }
-        // Partial match - at least minAttendees available
+        // Partial match - at least minAttendees available (and organizer can attend)
         else if (includePartial && availableMembers.length >= minAttendees) {
             partialMatchCandidates.push({
                 start: currentTime.toISOString(),
@@ -94,7 +116,8 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
                 availableMembers,
                 unavailableMembers,
                 attendanceRatio,
-                isFullMatch: false
+                isFullMatch: false,
+                qualityScore
             });
         }
 
@@ -106,18 +129,74 @@ export function findCommonHumaneSlots(members, busySlots, rangeStartStr, rangeEn
     console.log(`Full matches (everyone): ${fullMatchCandidates.length}`);
     console.log(`Partial matches: ${partialMatchCandidates.length}`);
 
-    // Return full matches first, then partial matches sorted by attendance ratio
-    const results = [
-        ...fullMatchCandidates,
-        ...partialMatchCandidates.sort((a, b) => b.attendanceRatio - a.attendanceRatio)
-    ];
+    // Sort by quality (lower is better), then by attendance
+    const sortedFull = fullMatchCandidates.sort((a, b) => a.qualityScore - b.qualityScore);
+    const sortedPartial = partialMatchCandidates.sort((a, b) => {
+        // First by attendance ratio (higher is better)
+        if (b.attendanceRatio !== a.attendanceRatio) {
+            return b.attendanceRatio - a.attendanceRatio;
+        }
+        // Then by quality score (lower is better)
+        return a.qualityScore - b.qualityScore;
+    });
 
-    // Deduplicate consecutive similar slots
-    const dedupedResults = deduplicateSlots(results);
+    // Group by day and take best slot per day for cleaner display
+    const bestFullByDay = groupBestSlotsByDay(sortedFull, 3); // Top 3 per day
+    const bestPartialByDay = groupBestSlotsByDay(sortedPartial, 2); // Top 2 per day
+
+    const results = [
+        ...bestFullByDay,
+        ...bestPartialByDay
+    ];
     
-    console.log(`After dedup: ${dedupedResults.length}`);
+    console.log(`After grouping: ${results.length} (${bestFullByDay.length} full, ${bestPartialByDay.length} partial)`);
     
-    return dedupedResults;
+    return results;
+}
+
+/**
+ * Group slots by day and take the best N per day
+ */
+function groupBestSlotsByDay(slots, maxPerDay = 3) {
+    const byDay = {};
+    
+    for (const slot of slots) {
+        const dayKey = new Date(slot.start).toDateString();
+        if (!byDay[dayKey]) {
+            byDay[dayKey] = [];
+        }
+        if (byDay[dayKey].length < maxPerDay) {
+            byDay[dayKey].push(slot);
+        }
+    }
+    
+    // Flatten back to array, sorted by date
+    return Object.entries(byDay)
+        .sort(([a], [b]) => new Date(a) - new Date(b))
+        .flatMap(([, daySlots]) => daySlots);
+}
+
+/**
+ * Calculate quality score for a slot (lower is better)
+ * Considers fairness across timezones
+ */
+function calculateSlotQuality(startUtc, endUtc, members) {
+    let totalScore = 0;
+    
+    for (const member of members) {
+        const tz = member.timezone || 'UTC';
+        let localTime;
+        try {
+            localTime = toZonedTime(startUtc, tz);
+        } catch {
+            localTime = new Date(startUtc);
+        }
+        
+        const localHour = localTime.getHours() + localTime.getMinutes() / 60;
+        totalScore += calculateHourFairness(localHour);
+    }
+    
+    return totalScore / members.length;
 }
 
 /**
