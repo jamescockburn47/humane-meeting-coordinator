@@ -24,11 +24,18 @@ export function Sidebar({
     const [betaCodeInput, setBetaCodeInput] = useState('');
     const [betaError, setBetaError] = useState('');
 
-    // Check localStorage for existing beta access
+    // Check localStorage for existing beta access OR existing user session
     useEffect(() => {
         const savedAccess = localStorage.getItem('hasBetaAccess');
-        if (savedAccess === 'true') {
+        const existingSession = localStorage.getItem('userSession');
+        
+        // Grant beta access if they have the flag OR if they were already logged in before
+        if (savedAccess === 'true' || existingSession) {
             setHasBetaAccess(true);
+            // Also set the flag so they keep access even if they log out
+            if (!savedAccess) {
+                localStorage.setItem('hasBetaAccess', 'true');
+            }
         }
     }, []);
 
