@@ -3841,6 +3841,123 @@ label {
   font-family: var(--font-sans);
 }
 
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header-row h3 {
+  margin: 0;
+}
+
+/* Beta Management Section */
+.beta-section {
+  background: rgba(218, 165, 32, 0.05);
+  border: 1px solid rgba(218, 165, 32, 0.2);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+}
+
+.beta-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.beta-limit-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.limit-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.provider-icon {
+  font-size: 1rem;
+}
+
+.limit-count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.limit-count .count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.limit-count .count.at-limit {
+  color: #ef4444;
+}
+
+.limit-count .limit {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.limit-bar {
+  height: 6px;
+  background: var(--bg-sidebar);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.limit-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.limit-fill.google {
+  background: linear-gradient(90deg, #4285f4, #34a853);
+}
+
+.limit-fill.microsoft {
+  background: linear-gradient(90deg, #00a4ef, #7fba00);
+}
+
+.limit-fill.other {
+  background: var(--text-muted);
+}
+
+.limit-warning {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 0.5rem;
+}
+
+.beta-user-list {
+  margin-top: 1rem;
+}
+
+.beta-user-list summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+}
+
+.beta-user-list summary:hover {
+  color: var(--primary);
+  background: rgba(218, 165, 32, 0.1);
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

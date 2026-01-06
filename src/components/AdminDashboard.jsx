@@ -27,6 +27,12 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         groupMembers: { count: 0, error: null },
         availabilityCache: { count: 0, error: null }
     });
+    const [betaStats, setBetaStats] = useState({
+        google: { count: 0, users: [] },
+        microsoft: { count: 0, users: [] },
+        guest: { count: 0, users: [] }
+    });
+    const [exportLoading, setExportLoading] = useState(false);
     const [systemStatus, setSystemStatus] = useState({
         supabase: { status: 'checking', latency: null },
         google: { status: 'unknown' },
@@ -178,11 +184,110 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         // Fetch stats
         await fetchStats();
 
+        // Fetch beta tester stats
+        await fetchBetaStats();
+
         // Check OAuth configs
         checkOAuthConfig();
 
         setLoading(false);
         addLog('Diagnostics complete', 'success');
+    };
+
+    // Fetch beta tester breakdown by provider
+    const fetchBetaStats = async () => {
+        addLog('Fetching beta tester statistics...', 'info');
+        
+        try {
+            // Get all profiles with their info
+            const { data: profiles, error } = await supabase
+                .from('profiles')
+                .select('email, display_name, timezone, created_at')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            // Categorize by provider (infer from email domain)
+            const googleUsers = [];
+            const microsoftUsers = [];
+            const guestUsers = [];
+
+            profiles.forEach(p => {
+                const email = p.email?.toLowerCase() || '';
+                if (email.includes('@gmail.com') || email.includes('@googlemail.com')) {
+                    googleUsers.push(p);
+                } else if (email.includes('@outlook.') || email.includes('@hotmail.') || 
+                           email.includes('@live.') || email.includes('@msn.')) {
+                    microsoftUsers.push(p);
+                } else {
+                    // Could be work email (Google Workspace) or guest - treat as "other"
+                    guestUsers.push(p);
+                }
+            });
+
+            setBetaStats({
+                google: { count: googleUsers.length, users: googleUsers },
+                microsoft: { count: microsoftUsers.length, users: microsoftUsers },
+                guest: { count: guestUsers.length, users: guestUsers }
+            });
+
+            addLog(`Beta breakdown: ${googleUsers.length} Google, ${microsoftUsers.length} Microsoft, ${guestUsers.length} Other`, 'success');
+        } catch (e) {
+            addLog(`Beta stats failed: ${e.message}`, 'error');
+        }
+    };
+
+    // Export beta testers to CSV
+    const exportBetaTesters = async () => {
+        setExportLoading(true);
+        addLog('Exporting beta testers...', 'info');
+        
+        try {
+            const { data: profiles, error } = await supabase
+                .from('profiles')
+                .select('email, display_name, timezone, created_at')
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+
+            // Create CSV content
+            const headers = ['Email', 'Name', 'Timezone', 'Sign-up Date', 'Provider (Inferred)'];
+            const rows = profiles.map(p => {
+                const email = p.email?.toLowerCase() || '';
+                let provider = 'Other/Guest';
+                if (email.includes('@gmail.com') || email.includes('@googlemail.com')) {
+                    provider = 'Google';
+                } else if (email.includes('@outlook.') || email.includes('@hotmail.') || 
+                           email.includes('@live.') || email.includes('@msn.')) {
+                    provider = 'Microsoft';
+                }
+                return [
+                    p.email,
+                    p.display_name || '',
+                    p.timezone || '',
+                    p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '',
+                    provider
+                ].map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',');
+            });
+
+            const csv = [headers.join(','), ...rows].join('\n');
+            
+            // Download as file
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `humane-calendar-beta-testers-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            addLog(`Exported ${profiles.length} users to CSV`, 'success');
+        } catch (e) {
+            addLog(`Export failed: ${e.message}`, 'error');
+            alert('Export failed: ' + e.message);
+        } finally {
+            setExportLoading(false);
+        }
     };
 
     const checkSupabase = async () => {
@@ -453,6 +558,114 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* BETA TESTER MANAGEMENT */}
+                <div className="admin-section beta-section">
+                    <div className="section-header-row">
+                        <h3>🧪 Beta Tester Management</h3>
+                        <button 
+                            className="btn-primary" 
+                            onClick={exportBetaTesters}
+                            disabled={exportLoading}
+                            style={{ fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+                        >
+                            {exportLoading ? '📥 Exporting...' : '📥 Export CSV'}
+                        </button>
+                    </div>
+                    
+                    <div className="beta-limits">
+                        <div className="beta-limit-card google">
+                            <div className="limit-header">
+                                <span className="provider-icon">🔵</span>
+                                <span>Google Users</span>
+                            </div>
+                            <div className="limit-count">
+                                <span className={`count ${betaStats.google.count >= 50 ? 'at-limit' : ''}`}>
+                                    {betaStats.google.count}
+                                </span>
+                                <span className="limit">/ 50</span>
+                            </div>
+                            <div className="limit-bar">
+                                <div 
+                                    className="limit-fill google" 
+                                    style={{ width: `${Math.min(100, (betaStats.google.count / 50) * 100)}%` }}
+                                />
+                            </div>
+                            {betaStats.google.count >= 50 && (
+                                <div className="limit-warning">⚠️ Limit reached!</div>
+                            )}
+                        </div>
+
+                        <div className="beta-limit-card microsoft">
+                            <div className="limit-header">
+                                <span className="provider-icon">🟢</span>
+                                <span>Microsoft Users</span>
+                            </div>
+                            <div className="limit-count">
+                                <span className={`count ${betaStats.microsoft.count >= 50 ? 'at-limit' : ''}`}>
+                                    {betaStats.microsoft.count}
+                                </span>
+                                <span className="limit">/ 50</span>
+                            </div>
+                            <div className="limit-bar">
+                                <div 
+                                    className="limit-fill microsoft" 
+                                    style={{ width: `${Math.min(100, (betaStats.microsoft.count / 50) * 100)}%` }}
+                                />
+                            </div>
+                            {betaStats.microsoft.count >= 50 && (
+                                <div className="limit-warning">⚠️ Limit reached!</div>
+                            )}
+                        </div>
+
+                        <div className="beta-limit-card other">
+                            <div className="limit-header">
+                                <span className="provider-icon">⚪</span>
+                                <span>Other/Guests</span>
+                            </div>
+                            <div className="limit-count">
+                                <span className="count">{betaStats.guest.count}</span>
+                                <span className="limit">/ ∞</span>
+                            </div>
+                            <div className="limit-bar">
+                                <div 
+                                    className="limit-fill other" 
+                                    style={{ width: '0%' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <details className="beta-user-list">
+                        <summary>View All Beta Testers ({stats.profiles.count})</summary>
+                        <div className="data-table-container" style={{ marginTop: '1rem' }}>
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Email</th>
+                                        <th>Name</th>
+                                        <th>Provider</th>
+                                        <th>Sign-up</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {[...betaStats.google.users, ...betaStats.microsoft.users, ...betaStats.guest.users].map(u => (
+                                        <tr key={u.email}>
+                                            <td>{u.email}</td>
+                                            <td>{u.display_name || '-'}</td>
+                                            <td>
+                                                {u.email?.includes('@gmail') || u.email?.includes('@googlemail') ? '🔵 Google' :
+                                                 u.email?.includes('@outlook') || u.email?.includes('@hotmail') || u.email?.includes('@live') ? '🟢 Microsoft' :
+                                                 '⚪ Other'}
+                                            </td>
+                                            <td>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
                 </div>
 
                 {/* Database Stats */}
