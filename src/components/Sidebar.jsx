@@ -361,23 +361,26 @@ export function Sidebar({
                 >
                     Privacy
                 </div>
-                <div
-                    className="admin-link"
-                    onClick={onShowAdmin}
-                    title="Admin Dashboard (Ctrl+Shift+A)"
-                    style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: '0.25rem',
-                        padding: '0.5rem',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '4px',
-                        marginTop: '0.75rem'
-                    }}
-                >
-                    ⚙️ Admin Dashboard
-                </div>
+                {/* Admin Dashboard - ONLY visible to site owner */}
+                {user?.username === 'james.a.cockburn@gmail.com' && (
+                    <div
+                        className="admin-link"
+                        onClick={onShowAdmin}
+                        title="Admin Dashboard (Ctrl+Shift+A)"
+                        style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            gap: '0.25rem',
+                            padding: '0.5rem',
+                            background: 'rgba(255,255,255,0.05)',
+                            borderRadius: '4px',
+                            marginTop: '0.75rem'
+                        }}
+                    >
+                        ⚙️ Admin Dashboard
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -17,9 +17,34 @@ async function hashPassword(password) {
 }
 
 export function AdminDashboard({ onClose, currentUserEmail }) {
+    // SECURITY: Only allow access for site owner
+    const isAdmin = currentUserEmail === ADMIN_EMAIL;
+    
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [authError, setAuthError] = useState('');
     const [passwordInput, setPasswordInput] = useState('');
+    
+    // If not admin, show access denied and close
+    if (!isAdmin) {
+        return (
+            <div className="admin-modal-overlay" onClick={onClose}>
+                <div className="admin-modal" onClick={e => e.stopPropagation()}>
+                    <div className="admin-header">
+                        <h2>Access Denied</h2>
+                        <button className="admin-close" onClick={onClose}>×</button>
+                    </div>
+                    <div style={{ padding: '2rem', textAlign: 'center' }}>
+                        <p style={{ color: 'var(--text-muted)' }}>
+                            Admin dashboard is restricted to the site owner.
+                        </p>
+                        <button className="btn-primary" onClick={onClose} style={{ marginTop: '1rem' }}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         profiles: { count: 0, recent: [], error: null },

@@ -97,17 +97,21 @@ function App() {
     }
   }, []);
 
-  // Admin dashboard keyboard shortcut (Ctrl+Shift+A)
+  // Admin dashboard keyboard shortcut (Ctrl+Shift+A) - ONLY for site owner
+  const ADMIN_EMAIL = 'james.a.cockburn@gmail.com';
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-        e.preventDefault();
-        setShowAdminDashboard(true);
+        // Only allow admin access for site owner
+        if (activeAccount?.username === ADMIN_EMAIL) {
+          e.preventDefault();
+          setShowAdminDashboard(true);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [activeAccount]);
 
   // PERSISTENT LOGIN: Restore session from localStorage on page load
   useEffect(() => {
