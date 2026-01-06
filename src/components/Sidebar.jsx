@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../services/supabase';
 
 // Beta invite code - can be overridden via environment variable
 const BETA_CODE = import.meta.env.VITE_BETA_CODE || 'HUMANE100';
@@ -23,6 +24,10 @@ export function Sidebar({
     const [hasBetaAccess, setHasBetaAccess] = useState(false);
     const [betaCodeInput, setBetaCodeInput] = useState('');
     const [betaError, setBetaError] = useState('');
+    const [showRequestForm, setShowRequestForm] = useState(false);
+    const [showCodeInput, setShowCodeInput] = useState(false);
+    const [requestForm, setRequestForm] = useState({ name: '', email: '', reason: '' });
+    const [requestStatus, setRequestStatus] = useState(null); // 'sending', 'sent', 'error'
 
     // Check localStorage for existing beta access OR existing user session
     useEffect(() => {
@@ -47,6 +52,48 @@ export function Sidebar({
         } else {
             setBetaError('Invalid invite code');
             setTimeout(() => setBetaError(''), 3000);
+        }
+    };
+
+    // Submit beta access request
+    const handleRequestAccess = async () => {
+        if (!requestForm.name.trim() || !requestForm.email.trim()) {
+            setBetaError('Please fill in name and email');
+            return;
+        }
+        
+        // Basic email validation
+        if (!requestForm.email.includes('@')) {
+            setBetaError('Please enter a valid email');
+            return;
+        }
+        
+        setRequestStatus('sending');
+        setBetaError('');
+        
+        try {
+            // Create a pending profile (is_approved = null means pending)
+            const { error } = await supabase
+                .from('profiles')
+                .upsert({
+                    email: requestForm.email.toLowerCase().trim(),
+                    display_name: requestForm.name.trim(),
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    humane_start_local: '09:00',
+                    humane_end_local: '17:00',
+                    humane_windows: [{ start: '09:00', end: '17:00', type: 'weekday' }],
+                    // is_approved defaults to NULL in DB (pending)
+                }, { onConflict: 'email' });
+            
+            if (error) throw error;
+            
+            setRequestStatus('sent');
+            // Store email so we can check their status later
+            localStorage.setItem('pendingBetaEmail', requestForm.email.toLowerCase().trim());
+        } catch (err) {
+            console.error('Request access failed:', err);
+            setBetaError('Failed to submit request. Please try again.');
+            setRequestStatus('error');
         }
     };
 
@@ -175,7 +222,58 @@ export function Sidebar({
                                     Sign in with Google
                                 </button>
                             </>
-                        ) : (
+                        ) : requestStatus === 'sent' ? (
+                            <div className="beta-request-sent">
+                                <div className="sent-icon">✓</div>
+                                <p className="sent-title">Request Submitted!</p>
+                                <p className="sent-message">
+                                    We'll review your request and email you when approved. 
+                                    Check back soon or use Guest mode below.
+                                </p>
+                            </div>
+                        ) : showRequestForm ? (
+                            <div className="beta-request-form">
+                                <input
+                                    type="text"
+                                    placeholder="Your name"
+                                    value={requestForm.name}
+                                    onChange={(e) => setRequestForm({ ...requestForm, name: e.target.value })}
+                                    className="beta-input"
+                                />
+                                <input
+                                    type="email"
+                                    placeholder="Your email"
+                                    value={requestForm.email}
+                                    onChange={(e) => setRequestForm({ ...requestForm, email: e.target.value })}
+                                    className="beta-input"
+                                />
+                                <textarea
+                                    placeholder="How will you use Humane Calendar? (optional)"
+                                    value={requestForm.reason}
+                                    onChange={(e) => setRequestForm({ ...requestForm, reason: e.target.value })}
+                                    className="beta-input beta-textarea"
+                                    rows={2}
+                                />
+                                <button 
+                                    onClick={handleRequestAccess}
+                                    className="btn-primary"
+                                    disabled={requestStatus === 'sending'}
+                                    style={{ width: '100%' }}
+                                >
+                                    {requestStatus === 'sending' ? 'Submitting...' : 'Submit Request'}
+                                </button>
+                                <button 
+                                    onClick={() => setShowRequestForm(false)}
+                                    className="btn-ghost"
+                                    style={{ width: '100%', fontSize: '0.75rem' }}
+                                >
+                                    ← Back
+                                </button>
+                                {betaError && (
+                                    <div className="beta-error">{betaError}</div>
+                                )}
+                            </div>
+                        ) : showCodeInput ? (
                             <div className="beta-code-section">
                                 <input
                                     type="text"
@@ -192,9 +290,33 @@ export function Sidebar({
                                 >
                                     Unlock
                                 </button>
+                                <button 
+                                    onClick={() => setShowCodeInput(false)}
+                                    className="btn-ghost"
+                                    style={{ width: '100%', fontSize: '0.75rem', marginTop: '0.5rem' }}
+                                >
+                                    ← Back
+                                </button>
                                 {betaError && (
                                     <div className="beta-error">{betaError}</div>
                                 )}
+                            </div>
+                        ) : (
+                            <div className="beta-options">
+                                <button 
+                                    onClick={() => setShowRequestForm(true)}
+                                    className="btn-primary"
+                                    style={{ width: '100%' }}
+                                >
+                                    Request Beta Access
+                                </button>
+                                <button 
+                                    onClick={() => setShowCodeInput(true)}
+                                    className="btn-ghost"
+                                    style={{ width: '100%', fontSize: '0.8rem' }}
+                                >
+                                    I have an invite code
+                                </button>
                             </div>
                         )}
 
