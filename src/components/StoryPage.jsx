@@ -96,6 +96,12 @@ export function StoryPage() {
                             you're concerned about. Use a personal calendar you're comfortable experimenting with.
                         </p>
                         <p>
+                            <strong>Microsoft work/school accounts:</strong> If you use Microsoft 365 through 
+                            your employer (e.g., a law firm), their IT policies may block sign-in from 
+                            unverified apps. Use a personal Microsoft account (outlook.com, hotmail.com) 
+                            or Google instead.
+                        </p>
+                        <p>
                             <strong>Beta test at your own risk.</strong>
                         </p>
                     </div>
