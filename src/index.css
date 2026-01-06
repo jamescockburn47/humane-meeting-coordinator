@@ -4250,65 +4250,56 @@ label {
 }
 
 /* ==========================================
-   AI COMMAND CENTER V2 - Subtle Dropdown Style
+   AI ASSISTANT - Clean, Minimal Design
    ========================================== */
 
-.ai-command-center-v2 {
-  background: var(--bg-card);
+.ai-box {
+  margin: 1rem 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 1rem;
-  margin: 1rem 0;
+  background: var(--bg-card);
+  overflow: hidden;
 }
 
-.ai-cc-row {
+.ai-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  gap: 1rem;
+}
+
+.ai-bar-left {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex-wrap: wrap;
 }
 
-.ai-cc-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-}
-
-.ai-cc-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.ai-cc-select {
-  flex: 0 0 auto;
-  min-width: 220px;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-sidebar);
-  border: 1px solid var(--border);
+.ai-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  background: var(--primary-dim);
+  padding: 0.25rem 0.5rem;
   border-radius: var(--radius-sm);
-  color: var(--text-main);
-  font-size: 0.85rem;
-  cursor: pointer;
 }
 
-.ai-cc-select:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-.ai-cc-or {
-  color: var(--text-muted);
+.ai-status {
   font-size: 0.75rem;
 }
 
-.ai-cc-input {
+.ai-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   flex: 1;
-  min-width: 150px;
+  max-width: 400px;
+}
+
+.ai-input {
+  flex: 1;
   padding: 0.5rem 0.75rem;
   background: var(--bg-sidebar);
   border: 1px solid var(--border);
@@ -4317,105 +4308,49 @@ label {
   font-size: 0.85rem;
 }
 
-.ai-cc-input:focus {
+.ai-input:focus {
   outline: none;
   border-color: var(--primary);
 }
 
-.ai-cc-input::placeholder {
+.ai-input::placeholder {
   color: var(--text-muted);
 }
 
-.ai-cc-go {
-  padding: 0.5rem 1rem;
+.ai-send {
+  padding: 0.5rem 0.75rem;
   background: var(--primary);
   color: var(--bg-app);
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
+  min-width: 36px;
 }
 
-.ai-cc-go:hover:not(:disabled) {
+.ai-send:hover:not(:disabled) {
   filter: brightness(1.1);
 }
 
-.ai-cc-go:disabled {
-  opacity: 0.5;
+.ai-send:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* Results V2 */
-.ai-cc-results-v2 {
-  margin-top: 1rem;
-  padding-top: 1rem;
+.ai-expanded {
+  padding: 0.75rem 1rem;
   border-top: 1px solid var(--border);
-}
-
-.ai-loading-inline {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.ai-loading-spinner-small {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.ai-error-inline {
-  color: #fca5a5;
-  font-size: 0.85rem;
-  padding: 0.5rem;
-  background: rgba(239, 68, 68, 0.1);
-  border-radius: var(--radius-sm);
-}
-
-.ai-result-v2 {
-  position: relative;
-}
-
-.ai-result-text-v2 {
-  color: var(--text-main);
-  font-size: 0.9rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.ai-result-action {
-  margin-top: 0.75rem;
-}
-
-.ai-copyable {
   background: var(--bg-sidebar);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
-.ai-copyable pre {
-  margin: 0;
-  font-family: inherit;
-  font-size: 0.8rem;
-  white-space: pre-wrap;
-  color: var(--text-main);
+.ai-quick {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.btn-subtle {
+.ai-quick-btn {
   padding: 0.4rem 0.75rem;
   background: transparent;
   border: 1px solid var(--border);
@@ -4426,48 +4361,54 @@ label {
   transition: all 0.15s;
 }
 
-.btn-subtle:hover {
+.ai-quick-btn:hover {
   border-color: var(--primary);
   color: var(--primary);
 }
 
-.btn-subtle.copied {
-  border-color: #10b981;
-  color: #10b981;
-}
-
-.btn-subtle.small {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.7rem;
-}
-
-.ai-nudge-list {
+.ai-loading {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
-}
-
-.ai-nudge-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem;
-  background: var(--bg-sidebar);
-  border-radius: var(--radius-sm);
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
-.ai-slot-inline {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.5rem;
-  background: var(--bg-sidebar);
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+.ai-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
 }
 
-.ai-clear-btn {
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ai-response {
+  position: relative;
+}
+
+.ai-text {
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  padding-right: 2rem;
+}
+
+.ai-error {
+  color: #fca5a5;
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+}
+
+.ai-close {
   position: absolute;
   top: 0;
   right: 0;
@@ -4475,26 +4416,23 @@ label {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
-.ai-clear-btn:hover {
+.ai-close:hover {
   color: var(--text-main);
 }
 
 /* Responsive */
 @media (max-width: 600px) {
-  .ai-cc-row {
+  .ai-bar {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.75rem;
   }
   
-  .ai-cc-select {
-    min-width: 100%;
-  }
-  
-  .ai-cc-or {
-    text-align: center;
+  .ai-bar-right {
+    max-width: 100%;
   }
 }
