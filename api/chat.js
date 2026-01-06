@@ -90,24 +90,71 @@ function analyzeGroup(context) {
     };
 }
 
+// Format availability windows for display
+function formatWindows(windows) {
+    if (!windows || windows.length === 0) return 'NOT SET';
+    
+    return windows.map(w => {
+        // Handle multiple possible field names
+        const type = w.type || w.day_type || 'any';
+        const start = w.start || w.start_time || '?';
+        const end = w.end || w.end_time || '?';
+        return `${type}: ${start}-${end}`;
+    }).join('; ');
+}
+
 // Build context for the AI
 function buildContext(context, analysis) {
     let info = '';
     
     if (context?.user) {
-        info += `\nUser: ${context.user.name} (${context.user.timezone || 'Unknown'})`;
+        info += `\nYou are helping: ${context.user.name} (${context.user.timezone || 'Unknown timezone'})`;
     }
     
     if (context?.group) {
-        info += `\nGroup: "${context.group.name}"`;
+        info += `\nGroup: "${context.group.name}" (${context.group.memberCount} members)`;
+    }
+    
+    // DETAILED MEMBER LIST - This is crucial for the AI to answer questions
+    if (context?.members?.length > 0) {
+        info += `\n\n## MEMBER AVAILABILITY STATUS`;
+        
+        const withAvail = [];
+        const withoutAvail = [];
+        
+        context.members.forEach(m => {
+            const hasWindows = m.windows && m.windows.length > 0;
+            const memberInfo = {
+                name: m.name,
+                timezone: m.timezone || 'Unknown',
+                windows: formatWindows(m.windows)
+            };
+            
+            if (hasWindows) {
+                withAvail.push(memberInfo);
+            } else {
+                withoutAvail.push(memberInfo);
+            }
+        });
+        
+        if (withAvail.length > 0) {
+            info += `\n\n✅ Members who HAVE set availability (${withAvail.length}):`;
+            withAvail.forEach(m => {
+                info += `\n- ${m.name} (${m.timezone}): ${m.windows}`;
+            });
+        }
+        
+        if (withoutAvail.length > 0) {
+            info += `\n\n❌ Members who have NOT set availability (${withoutAvail.length}):`;
+            withoutAvail.forEach(m => {
+                info += `\n- ${m.name} (${m.timezone}): PENDING - needs to set their times`;
+            });
+        }
     }
     
     if (analysis) {
-        info += `\n\n## GROUP ANALYSIS`;
-        info += `\nMembers: ${analysis.memberCount}`;
-        info += `\nTimezone spread: ${analysis.spread}`;
-        info += `\nWesternmost: ${analysis.westernmost}`;
-        info += `\nEasternmost: ${analysis.easternmost}`;
+        info += `\n\n## TIMEZONE ANALYSIS`;
+        info += `\nSpread: ${analysis.spread} between ${analysis.westernmost} and ${analysis.easternmost}`;
         
         if (analysis.bestTimes?.length > 0) {
             info += `\n\nBest meeting times (everyone in reasonable hours):`;
@@ -116,19 +163,18 @@ function buildContext(context, analysis) {
             });
         }
         
-        if (analysis.pendingMembers?.length > 0) {
-            info += `\n\nWaiting on availability from: ${analysis.pendingMembers.join(', ')}`;
-        }
-        
+        info += `\n\n## SEARCH RESULTS`;
         if (analysis.hasFullMatch) {
-            info += `\n\n✅ ${analysis.fullMatchCount} time(s) work for everyone!`;
+            info += `\n✅ ${analysis.fullMatchCount} time slot(s) work for EVERYONE! Ready to book.`;
         } else if (analysis.partialMatchCount > 0) {
-            info += `\n\n⚠️ No perfect match. ${analysis.partialMatchCount} partial matches found.`;
+            info += `\n⚠️ No perfect match found. ${analysis.partialMatchCount} partial matches (some people unavailable).`;
+        } else {
+            info += `\nNo search run yet, or no overlapping times found.`;
         }
     }
     
     if (context?.busySlots?.length > 0) {
-        info += `\n\nCalendar busy slots are factored into the search.`;
+        info += `\n\nNote: Calendar busy slots from synced calendars are factored into the search.`;
     }
     
     return info;
@@ -189,11 +235,25 @@ export default async function handler(req, res) {
             });
         }
 
+        // Debug: Log what we received
+        console.log('AI Context received:', {
+            memberCount: context?.members?.length,
+            members: context?.members?.map(m => ({
+                name: m.name,
+                hasWindows: !!(m.windows && m.windows.length > 0),
+                windowCount: m.windows?.length || 0
+            })),
+            suggestionsCount: context?.suggestions?.length
+        });
+
         // Pre-analyze group
         const analysis = analyzeGroup(context);
         
         // Build prompt
         const systemPrompt = buildSystemPrompt(context, analysis, isOrganiser);
+        
+        // Debug: Log the context section
+        console.log('System prompt context section:', systemPrompt.slice(-1500));
 
         // Format messages
         const conversationMessages = messages.map(msg => ({
