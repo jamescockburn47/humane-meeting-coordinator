@@ -136,6 +136,25 @@ body {
   border: 1px solid var(--border);
 }
 
+/* Vibe Badge */
+.vibe-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(245, 158, 11, 0.15));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #a78bfa;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.vibe-icon {
+  font-size: 1rem;
+}
+
 .hero-title {
   font-size: 2.25rem;
   font-weight: 700;
@@ -2147,6 +2166,58 @@ label {
     padding: 0.5rem;
     font-size: 0.75rem;
   }
+}
+
+/* Story Section */
+.story-section {
+  flex-direction: column !important;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(245, 158, 11, 0.05));
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-md);
+  padding: 2rem !important;
+  margin-top: 1rem;
+}
+
+.story-section h3 {
+  margin: 0 0 1.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.story-section h3::before {
+  content: "⚡";
+}
+
+.story-content {
+  max-width: 650px;
+}
+
+.story-content p {
+  margin: 0 0 1rem 0;
+  line-height: 1.7;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.story-lead {
+  font-size: 1.1rem !important;
+  color: var(--primary) !important;
+}
+
+.story-vibe {
+  background: var(--bg-card);
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #a78bfa;
+  font-style: italic;
+}
+
+.story-signature {
+  font-size: 0.9rem !important;
+  color: var(--text-muted) !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0 !important;
 }
 
 .highlight-section {
