@@ -911,7 +911,8 @@ label {
   padding: 1rem;
 }
 
-.modal-content {
+.modal-content,
+.modal {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -921,6 +922,39 @@ label {
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+}
+
+/* Token Refresh Modal */
+.token-refresh-modal {
+  text-align: center;
+}
+
+.token-refresh-modal h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+}
+
+.token-refresh-modal p {
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.token-refresh-modal .token-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.modal-actions .btn-primary,
+.modal-actions .btn-ghost {
+  padding: 0.75rem 1.5rem;
   animation: fadeIn 0.3s ease-out;
 }
 

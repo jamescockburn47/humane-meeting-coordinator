@@ -25,7 +25,9 @@ function App() {
   const { instance, accounts } = useMsal();
   const [activeAccount, setActiveAccount] = useState(null);
   const [googleAccessToken, setGoogleAccessToken] = useState(null);
+  const [googleTokenExpiry, setGoogleTokenExpiry] = useState(null); // Track when token expires
   const [calendarConnected, setCalendarConnected] = useState(false);
+  const [showTokenRefresh, setShowTokenRefresh] = useState(false); // Show refresh modal
 
   // State
   const [view, setView] = useState('dashboard');
@@ -200,50 +202,99 @@ function App() {
     instance.loginPopup(loginRequest).catch(console.error);
   };
 
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setGoogleAccessToken(tokenResponse.access_token);
-      setCalendarConnected(true);
+  // Google login handler - also used for token refresh
+  const handleGoogleLoginSuccess = async (tokenResponse) => {
+    const newToken = tokenResponse.access_token;
+    setGoogleAccessToken(newToken);
+    // Google tokens expire in ~3600 seconds (1 hour), set expiry with 5 min buffer
+    const expiresIn = tokenResponse.expires_in || 3600;
+    setGoogleTokenExpiry(Date.now() + (expiresIn - 300) * 1000); // 5 min before actual expiry
+    setCalendarConnected(true);
+    setShowTokenRefresh(false);
+    
+    // Resolve any pending token refresh promise
+    if (window.__tokenRefreshResolve) {
+      window.__tokenRefreshResolve(newToken);
+      window.__tokenRefreshResolve = null;
+      window.__tokenRefreshReject = null;
+    }
 
-      const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-        headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-      }).then(res => res.json());
+    const userInfo = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+      headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+    }).then(res => res.json());
 
-      const googleUser = {
-        username: userInfo.email,
-        name: userInfo.name,
-        provider: 'google'
-      };
+    const googleUser = {
+      username: userInfo.email,
+      name: userInfo.name,
+      provider: 'google'
+    };
 
-      setActiveAccount(googleUser);
-      
-      // Save session to localStorage for persistence
-      localStorage.setItem('userSession', JSON.stringify(googleUser));
+    setActiveAccount(googleUser);
+    
+    // Save session to localStorage for persistence
+    localStorage.setItem('userSession', JSON.stringify(googleUser));
 
-      // Check if profile exists - load saved preferences or create new
-      const existingProfile = await getProfile(googleUser.username);
-      if (existingProfile) {
-        // Load saved availability windows
-        if (existingProfile.humane_windows && existingProfile.humane_windows.length > 0) {
-          setHumaneWindows(existingProfile.humane_windows);
-        }
-        if (existingProfile.timezone) setTimezone(existingProfile.timezone);
-        if (existingProfile.night_owl !== undefined) setNightOwl(existingProfile.night_owl);
-      } else {
-        // First time user - create profile with defaults
-        await updateProfile(
-          googleUser.username, 
-          googleUser.name, 
-          Intl.DateTimeFormat().resolvedOptions().timeZone, 
-          "09:00", 
-          "17:00", 
-          [{ start: "09:00", end: "17:00", type: "weekday" }]
-        );
+    // Check if profile exists - load saved preferences or create new
+    const existingProfile = await getProfile(googleUser.username);
+    if (existingProfile) {
+      // Load saved availability windows
+      if (existingProfile.humane_windows && existingProfile.humane_windows.length > 0) {
+        setHumaneWindows(existingProfile.humane_windows);
       }
-      fetchMyGroups(googleUser.username);
+      if (existingProfile.timezone) setTimezone(existingProfile.timezone);
+      if (existingProfile.night_owl !== undefined) setNightOwl(existingProfile.night_owl);
+    } else {
+      // First time user - create profile with defaults
+      await updateProfile(
+        googleUser.username, 
+        googleUser.name, 
+        Intl.DateTimeFormat().resolvedOptions().timeZone, 
+        "09:00", 
+        "17:00", 
+        [{ start: "09:00", end: "17:00", type: "weekday" }]
+      );
+    }
+    fetchMyGroups(googleUser.username);
+  };
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: handleGoogleLoginSuccess,
+    scope: 'https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.owned'
+  });
+
+  // Token refresh login - same scopes, used when token expires
+  const handleGoogleTokenRefresh = useGoogleLogin({
+    onSuccess: handleGoogleLoginSuccess,
+    onError: () => {
+      alert("Failed to refresh Google session. Please log out and log back in.");
+      setShowTokenRefresh(false);
     },
     scope: 'https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.owned'
   });
+
+  // Check if Google token is valid (not expired)
+  const isGoogleTokenValid = () => {
+    if (!googleAccessToken || !googleTokenExpiry) return false;
+    return Date.now() < googleTokenExpiry;
+  };
+
+  // Get a valid Google token, triggering refresh if needed
+  const ensureValidGoogleToken = async () => {
+    if (isGoogleTokenValid()) {
+      return googleAccessToken;
+    }
+    
+    // Token expired - need to refresh
+    console.log("Google token expired, requesting refresh...");
+    setShowTokenRefresh(true);
+    
+    // Return a promise that resolves when user completes refresh
+    return new Promise((resolve, reject) => {
+      // Store callbacks for later
+      window.__tokenRefreshResolve = resolve;
+      window.__tokenRefreshReject = reject;
+    });
+  };
 
   // Guest login (no calendar integration)
   const handleGuestJoin = async (guestData) => {
@@ -674,8 +725,22 @@ function App() {
       console.log("Sending invites to:", memberEmails, "(", members.length, "members)", "Organizer:", organizerEmail);
 
       if (activeAccount.provider === 'google') {
+        // Check if token is valid, refresh if needed
+        let validToken = googleAccessToken;
+        if (!isGoogleTokenValid()) {
+          console.log("Google token expired, requesting refresh before booking...");
+          // Show refresh modal and wait for user to complete
+          setShowTokenRefresh(true);
+          validToken = await new Promise((resolve, reject) => {
+            window.__tokenRefreshResolve = resolve;
+            window.__tokenRefreshReject = reject;
+            // Trigger the refresh login
+            setTimeout(() => handleGoogleTokenRefresh(), 100);
+          });
+        }
+
         const result = await createGoogleEvent(
-          googleAccessToken,
+          validToken,
           subject,
           description,
           slot.start,
@@ -859,6 +924,38 @@ function App() {
           onClose={() => setShowGuestModal(false)}
           onJoin={handleGuestJoin}
         />
+      )}
+
+      {/* Token Refresh Modal */}
+      {showTokenRefresh && (
+        <div className="modal-overlay">
+          <div className="modal token-refresh-modal">
+            <h3>🔄 Session Refresh Required</h3>
+            <p>Your Google session has expired. Click below to reconnect — this only takes a second.</p>
+            <p className="token-note">Google access tokens expire after 1 hour for security.</p>
+            <div className="modal-actions">
+              <button 
+                className="btn-primary"
+                onClick={() => handleGoogleTokenRefresh()}
+              >
+                Reconnect Google
+              </button>
+              <button 
+                className="btn-ghost"
+                onClick={() => {
+                  setShowTokenRefresh(false);
+                  if (window.__tokenRefreshReject) {
+                    window.__tokenRefreshReject(new Error("User cancelled token refresh"));
+                    window.__tokenRefreshReject = null;
+                    window.__tokenRefreshResolve = null;
+                  }
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Privacy Policy Modal */}
