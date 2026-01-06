@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 /**
- * AI Command Center - Prominent, action-driven AI assistant
- * Different views for Organiser vs Invitee
+ * AI Command Center - Subtle dropdown-based AI assistant
+ * Different options for Organiser vs Invitee
  */
 export function AICommandCenter({ 
     currentUser = null,
@@ -14,21 +14,13 @@ export function AICommandCenter({
     isOrganiser = false,
     onBookMeeting = null
 }) {
-    const [activeAction, setActiveAction] = useState(null);
+    const [selectedAction, setSelectedAction] = useState('');
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [customQuery, setCustomQuery] = useState('');
-    const [isExpanded, setIsExpanded] = useState(true);
     const [copiedItem, setCopiedItem] = useState(null);
-
-    // Auto-analyze on load if we have data
-    useEffect(() => {
-        if (groupMembers.length >= 2 && suggestions.length > 0 && !result) {
-            // Auto-run summary on load
-            executeAction('summarize');
-        }
-    }, [groupMembers.length, suggestions.length]);
+    const selectRef = useRef(null);
 
     const buildContext = () => ({
         user: currentUser ? {
@@ -127,21 +119,23 @@ export function AICommandCenter({
         }
     };
 
-    // Organiser actions
+    // Organiser actions - grouped by category
     const organiserActions = [
-        { id: 'analyze', icon: '🔍', label: 'Analyze Timezones', description: 'Why can\'t we find a time?' },
-        { id: 'find_slot', icon: '📅', label: 'Find Next Slot', description: 'Best available time' },
-        { id: 'who_missing', icon: '👥', label: 'Who\'s Missing?', description: 'Send reminders' },
-        { id: 'message_all', icon: '📢', label: 'Message All', description: 'Update everyone' },
-        { id: 'check_holidays', icon: '🎄', label: 'Check Holidays', description: 'Avoid conflicts' },
-        { id: 'fair_rotation', icon: '⚖️', label: 'Fair Rotation', description: 'Recurring meetings' },
-        { id: 'split_group', icon: '✂️', label: 'Split Group', description: 'By timezone' },
+        { id: '', label: 'Choose an action...', group: '' },
+        { id: 'analyze', label: 'Analyze why we can\'t find a time', group: 'Analysis' },
+        { id: 'find_slot', label: 'Find the next available slot', group: 'Analysis' },
+        { id: 'who_missing', label: 'Who hasn\'t set availability?', group: 'Members' },
+        { id: 'message_all', label: 'Draft message for all members', group: 'Communication' },
+        { id: 'check_holidays', label: 'Check for holiday conflicts', group: 'Analysis' },
+        { id: 'fair_rotation', label: 'Suggest fair time rotation', group: 'Planning' },
+        { id: 'split_group', label: 'Should we split by timezone?', group: 'Planning' },
     ];
 
     // Invitee actions (simpler)
     const inviteeActions = [
-        { id: 'summarize', icon: '📊', label: 'Meeting Status', description: 'What\'s happening?' },
-        { id: 'analyze', icon: '🕐', label: 'My Timezone', description: 'When would it be for me?' },
+        { id: '', label: 'Choose an action...', group: '' },
+        { id: 'summarize', label: 'What\'s the status of this meeting?', group: 'Info' },
+        { id: 'analyze', label: 'When would this be in my timezone?', group: 'Info' },
     ];
 
     const actions = isOrganiser ? organiserActions : inviteeActions;
@@ -152,166 +146,160 @@ export function AICommandCenter({
         const membersWithWindows = groupMembers.filter(m => m.humane_windows?.length > 0);
         
         if (groupMembers.length < 2) {
-            return { status: 'waiting', message: 'Waiting for more members to join...', color: 'var(--text-muted)' };
+            return { status: 'waiting', message: 'Waiting for members...', color: 'var(--text-muted)' };
         }
         if (membersWithWindows.length < groupMembers.length) {
             const missing = groupMembers.length - membersWithWindows.length;
-            return { status: 'incomplete', message: `${missing} member${missing > 1 ? 's' : ''} haven't set availability`, color: '#f59e0b' };
+            return { status: 'incomplete', message: `${missing} pending`, color: '#f59e0b' };
         }
         if (fullMatches.length > 0) {
-            return { status: 'ready', message: `${fullMatches.length} time${fullMatches.length > 1 ? 's' : ''} work for everyone!`, color: '#10b981' };
+            return { status: 'ready', message: `${fullMatches.length} slots found`, color: '#10b981' };
         }
-        return { status: 'blocked', message: 'No common times yet', color: '#ef4444' };
+        return { status: 'blocked', message: 'No overlap', color: '#ef4444' };
     };
 
     const status = getStatusSummary();
 
+    const handleActionChange = (e) => {
+        const actionId = e.target.value;
+        setSelectedAction(actionId);
+        if (actionId) {
+            executeAction(actionId);
+        }
+    };
+
     if (!currentGroup) {
-        return null; // Don't show if no group selected
+        return null;
     }
 
     return (
-        <div className={`ai-command-center ${isExpanded ? 'expanded' : 'collapsed'}`}>
-            <div className="ai-cc-header" onClick={() => setIsExpanded(!isExpanded)}>
-                <div className="ai-cc-title">
-                    <span className="ai-cc-icon">🤖</span>
-                    <span>AI Scheduling Assistant</span>
+        <div className="ai-command-center-v2">
+            <div className="ai-cc-row">
+                <div className="ai-cc-label">
+                    AI Assistant
+                    <span className="ai-cc-status-dot" style={{ background: status.color }} title={status.message}></span>
                 </div>
-                <div className="ai-cc-status" style={{ color: status.color }}>
-                    {status.message}
-                </div>
-                <button className="ai-cc-toggle">
-                    {isExpanded ? '−' : '+'}
+                
+                <select 
+                    ref={selectRef}
+                    className="ai-cc-select"
+                    value={selectedAction}
+                    onChange={handleActionChange}
+                    disabled={loading}
+                >
+                    {actions.map(action => (
+                        <option key={action.id} value={action.id}>
+                            {action.label}
+                        </option>
+                    ))}
+                </select>
+
+                <div className="ai-cc-or">or</div>
+
+                <input
+                    type="text"
+                    className="ai-cc-input"
+                    placeholder="Ask anything..."
+                    value={customQuery}
+                    onChange={(e) => setCustomQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && customQuery.trim() && executeAction('custom', customQuery.trim())}
+                    disabled={loading}
+                />
+                
+                <button 
+                    className="ai-cc-go"
+                    onClick={() => customQuery.trim() && executeAction('custom', customQuery.trim())}
+                    disabled={loading || !customQuery.trim()}
+                >
+                    {loading ? '...' : 'Go'}
                 </button>
             </div>
 
-            {isExpanded && (
-                <div className="ai-cc-body">
-                    {/* Quick Actions Grid */}
-                    <div className="ai-cc-actions">
-                        {actions.map(action => (
-                            <button
-                                key={action.id}
-                                className={`ai-action-btn ${activeAction === action.id ? 'active' : ''} ${loading && activeAction === action.id ? 'loading' : ''}`}
-                                onClick={() => executeAction(action.id)}
-                                disabled={loading}
-                            >
-                                <span className="ai-action-icon">{action.icon}</span>
-                                <span className="ai-action-label">{action.label}</span>
-                                <span className="ai-action-desc">{action.description}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Results Section */}
-                    {(result || loading || error) && (
-                        <div className="ai-cc-results">
-                            {loading && (
-                                <div className="ai-loading">
-                                    <div className="ai-loading-spinner"></div>
-                                    <span>Analyzing...</span>
-                                </div>
-                            )}
-
-                            {error && (
-                                <div className="ai-error">
-                                    <span>⚠️ {error}</span>
-                                </div>
-                            )}
-
-                            {result && !loading && (
-                                <div className="ai-result">
-                                    <div className="ai-result-text">
-                                        {result.text.split('\n').map((line, i) => (
-                                            <p key={i}>{line || '\u00A0'}</p>
-                                        ))}
-                                    </div>
-
-                                    {/* Tool Results as Cards */}
-                                    {result.toolResults?.map((tr, i) => (
-                                        <div key={i} className="ai-tool-card">
-                                            {tr.tool === 'generate_message' && tr.result?.message && (
-                                                <div className="ai-message-card">
-                                                    <div className="ai-message-header">
-                                                        Message for {tr.result.recipientName}
-                                                    </div>
-                                                    <div className="ai-message-body">
-                                                        {tr.result.message}
-                                                    </div>
-                                                    <button 
-                                                        className={`ai-copy-btn ${copiedItem === `msg-${i}` ? 'copied' : ''}`}
-                                                        onClick={() => copyToClipboard(tr.result.message, `msg-${i}`)}
-                                                    >
-                                                        {copiedItem === `msg-${i}` ? '✓ Copied!' : '📋 Copy'}
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            {tr.tool === 'send_nudge' && tr.result?.nudges && (
-                                                <div className="ai-nudges">
-                                                    <div className="ai-nudges-header">
-                                                        📧 {tr.result.nudges.length} reminder{tr.result.nudges.length > 1 ? 's' : ''} ready
-                                                    </div>
-                                                    {tr.result.nudges.map((nudge, j) => (
-                                                        <div key={j} className="ai-nudge-item">
-                                                            <span className="ai-nudge-name">{nudge.recipientName}</span>
-                                                            <button 
-                                                                className={`ai-copy-btn small ${copiedItem === `nudge-${j}` ? 'copied' : ''}`}
-                                                                onClick={() => copyToClipboard(nudge.message, `nudge-${j}`)}
-                                                            >
-                                                                {copiedItem === `nudge-${j}` ? '✓' : '📋'}
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {tr.tool === 'find_next_slot' && tr.result?.found && (
-                                                <div className="ai-slot-card">
-                                                    <div className="ai-slot-header">✅ Found a slot!</div>
-                                                    <div className="ai-slot-time">{tr.result.slot?.start}</div>
-                                                    {onBookMeeting && (
-                                                        <button className="ai-book-btn" onClick={() => onBookMeeting(tr.result.slot)}>
-                                                            📅 Book This
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {tr.tool === 'broadcast_message' && tr.result?.copyAllText && (
-                                                <div className="ai-broadcast-card">
-                                                    <div className="ai-broadcast-header">
-                                                        📢 Messages for {tr.result.messageCount} members
-                                                    </div>
-                                                    <button 
-                                                        className={`ai-copy-btn ${copiedItem === 'broadcast' ? 'copied' : ''}`}
-                                                        onClick={() => copyToClipboard(tr.result.copyAllText, 'broadcast')}
-                                                    >
-                                                        {copiedItem === 'broadcast' ? '✓ Copied All!' : '📋 Copy All Messages'}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+            {/* Results Section - Only show when there's content */}
+            {(result || loading || error) && (
+                <div className="ai-cc-results-v2">
+                    {loading && (
+                        <div className="ai-loading-inline">
+                            <div className="ai-loading-spinner-small"></div>
+                            <span>Thinking...</span>
                         </div>
                     )}
 
-                    {/* Custom Query Input */}
-                    <div className="ai-cc-custom">
-                        <input
-                            type="text"
-                            placeholder="Ask something specific..."
-                            value={customQuery}
-                            onChange={(e) => setCustomQuery(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleCustomQuery()}
-                            disabled={loading}
-                        />
-                        <button onClick={handleCustomQuery} disabled={loading || !customQuery.trim()}>
-                            Send
-                        </button>
-                    </div>
+                    {error && (
+                        <div className="ai-error-inline">
+                            {error}
+                        </div>
+                    )}
+
+                    {result && !loading && (
+                        <div className="ai-result-v2">
+                            <div className="ai-result-text-v2">
+                                {result.text}
+                            </div>
+
+                            {/* Copyable content from tool results */}
+                            {result.toolResults?.map((tr, i) => (
+                                <div key={i} className="ai-result-action">
+                                    {tr.tool === 'generate_message' && tr.result?.message && (
+                                        <>
+                                            <div className="ai-copyable">
+                                                <pre>{tr.result.message}</pre>
+                                            </div>
+                                            <button 
+                                                className={`btn-subtle ${copiedItem === `msg-${i}` ? 'copied' : ''}`}
+                                                onClick={() => copyToClipboard(tr.result.message, `msg-${i}`)}
+                                            >
+                                                {copiedItem === `msg-${i}` ? 'Copied' : 'Copy message'}
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {tr.tool === 'send_nudge' && tr.result?.nudges?.length > 0 && (
+                                        <div className="ai-nudge-list">
+                                            {tr.result.nudges.map((nudge, j) => (
+                                                <div key={j} className="ai-nudge-row">
+                                                    <span>{nudge.recipientName}</span>
+                                                    <button 
+                                                        className={`btn-subtle small ${copiedItem === `nudge-${j}` ? 'copied' : ''}`}
+                                                        onClick={() => copyToClipboard(nudge.message, `nudge-${j}`)}
+                                                    >
+                                                        {copiedItem === `nudge-${j}` ? 'Copied' : 'Copy'}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {tr.tool === 'find_next_slot' && tr.result?.found && (
+                                        <div className="ai-slot-inline">
+                                            <span>Best slot: {tr.result.slot?.start}</span>
+                                            {onBookMeeting && (
+                                                <button className="btn-subtle" onClick={() => onBookMeeting(tr.result.slot)}>
+                                                    Book this
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {tr.tool === 'broadcast_message' && tr.result?.copyAllText && (
+                                        <button 
+                                            className={`btn-subtle ${copiedItem === 'broadcast' ? 'copied' : ''}`}
+                                            onClick={() => copyToClipboard(tr.result.copyAllText, 'broadcast')}
+                                        >
+                                            {copiedItem === 'broadcast' ? 'Copied all' : 'Copy all messages'}
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+
+                            <button 
+                                className="ai-clear-btn"
+                                onClick={() => { setResult(null); setSelectedAction(''); setCustomQuery(''); }}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
