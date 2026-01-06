@@ -197,6 +197,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
             
             // Debug: log all profiles to console
             console.log('All profiles from Supabase:', profiles);
+            console.log('Sample profile is_approved values:', profiles?.slice(0, 3).map(p => ({ email: p.email, is_approved: p.is_approved, type: typeof p.is_approved })));
             addLog(`Found ${profiles?.length || 0} total profiles`, 'info');
 
             // Categorize by provider - use requested_provider if set, otherwise infer from email
@@ -227,8 +228,8 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                     guestUsers.push(userData);
                 }
                 
-                // Track pending users separately
-                if (p.is_approved === null) {
+                // Track pending users separately (null, undefined, or missing = pending)
+                if (p.is_approved === null || p.is_approved === undefined) {
                     pending.push(userData);
                 }
             });
@@ -237,19 +238,19 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
                 google: { 
                     count: googleUsers.length, 
                     approved: googleUsers.filter(u => u.is_approved === true).length,
-                    pending: googleUsers.filter(u => u.is_approved === null).length,
+                    pending: googleUsers.filter(u => u.is_approved == null).length, // == catches null AND undefined
                     users: googleUsers 
                 },
                 microsoft: { 
                     count: microsoftUsers.length, 
                     approved: microsoftUsers.filter(u => u.is_approved === true).length,
-                    pending: microsoftUsers.filter(u => u.is_approved === null).length,
+                    pending: microsoftUsers.filter(u => u.is_approved == null).length,
                     users: microsoftUsers 
                 },
                 guest: { 
                     count: guestUsers.length, 
                     approved: guestUsers.filter(u => u.is_approved === true).length,
-                    pending: guestUsers.filter(u => u.is_approved === null).length,
+                    pending: guestUsers.filter(u => u.is_approved == null).length,
                     users: guestUsers 
                 }
             });
