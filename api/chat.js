@@ -115,6 +115,38 @@ function sanitizeInput(text) {
         .substring(0, 2000); // Limit length
 }
 
+// SECURITY: Strip all email addresses from any object/string
+function stripEmails(obj) {
+    if (!obj) return obj;
+    
+    // Email regex pattern
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    
+    if (typeof obj === 'string') {
+        return obj.replace(emailRegex, '[email hidden]');
+    }
+    
+    if (Array.isArray(obj)) {
+        return obj.map(item => stripEmails(item));
+    }
+    
+    if (typeof obj === 'object') {
+        const cleaned = {};
+        for (const [key, value] of Object.entries(obj)) {
+            // Skip email-related keys entirely
+            if (key.toLowerCase().includes('email') || 
+                key.toLowerCase() === 'username' ||
+                key.toLowerCase() === 'profile_email') {
+                continue; // Don't include this field at all
+            }
+            cleaned[key] = stripEmails(value);
+        }
+        return cleaned;
+    }
+    
+    return obj;
+}
+
 // Build context for the AI
 function buildContext(context, analysis) {
     let info = '';
@@ -267,8 +299,11 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { messages, context, role = 'attendee' } = req.body;
+        const { messages, context: rawContext, role = 'attendee' } = req.body;
         const isOrganiser = role === 'organiser';
+        
+        // SECURITY: Strip all emails from context before processing
+        const context = stripEmails(rawContext);
 
         // Check API keys
         const anthropicKey = process.env.ANTHROPIC_API_KEY;

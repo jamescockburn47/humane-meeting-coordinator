@@ -59,10 +59,11 @@ export function SchedulingAssistant({
         }
     }, [isOpen, initialQuestion, autoSentQuestion, messages.length, isLoading]);
 
+    // SECURITY: Never send emails to the AI - only names and timezones
     const buildContext = () => ({
         user: currentUser ? {
             name: currentUser.name,
-            email: currentUser.username,
+            // NO EMAIL - removed for privacy
             provider: currentUser.provider,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             humaneWindows: humaneWindows,
@@ -71,21 +72,20 @@ export function SchedulingAssistant({
         group: currentGroup ? {
             id: currentGroup.id,
             name: currentGroup.name,
-            memberCount: groupMembers.length,
-            invite_code: currentGroup.invite_code
+            memberCount: groupMembers.length
+            // NO invite_code - removed for security
         } : null,
-        inviteCode: currentGroup?.invite_code || currentGroup?.id,
         members: groupMembers.map(m => ({
-            name: m.display_name || m.email?.split('@')[0],
-            email: m.email,
+            name: m.display_name || m.email?.split('@')[0] || 'Member',
+            // NO EMAIL - privacy protection
             timezone: m.timezone,
             windows: m.humane_windows
         })),
-        // Include busy slots from synced calendars
+        // Busy slots - NO emails, just time data
         busySlots: busySlots.slice(0, 20).map(slot => ({
             start: slot.start?.dateTime || slot.start_time,
-            end: slot.end?.dateTime || slot.end_time,
-            email: slot.profile_email
+            end: slot.end?.dateTime || slot.end_time
+            // NO email - removed for privacy
         })),
         suggestions: suggestions.slice(0, 10).map(s => ({
             start: s.start,
@@ -93,7 +93,7 @@ export function SchedulingAssistant({
             availableCount: s.availableMembers?.length || 0,
             totalMembers: groupMembers.length,
             isFullMatch: s.isFullMatch,
-            unavailable: s.unavailableMembers?.map(m => m.display_name || m.email?.split('@')[0]) || []
+            unavailable: s.unavailableMembers?.map(m => m.display_name || m.name || 'Member') || []
         }))
     });
 

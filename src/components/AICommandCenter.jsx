@@ -22,28 +22,29 @@ export function AICommandCenter({
     // Check if user is a guest (AI restricted during beta)
     const isGuest = currentUser?.provider === 'guest';
 
+    // SECURITY: Never send emails to the AI - only names and timezones
     const buildContext = () => ({
         user: currentUser ? {
             name: currentUser.name,
-            email: currentUser.username,
+            // NO EMAIL - privacy protection
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         } : null,
         group: currentGroup ? {
             id: currentGroup.id,
             name: currentGroup.name,
-            memberCount: groupMembers.length,
-            invite_code: currentGroup.invite_code
+            memberCount: groupMembers.length
+            // NO invite_code - security
         } : null,
         members: groupMembers.map(m => ({
-            name: m.display_name || m.email?.split('@')[0],
-            email: m.email,
+            name: m.display_name || m.email?.split('@')[0] || 'Member',
+            // NO EMAIL - privacy protection
             timezone: m.timezone,
             windows: m.humane_windows
         })),
         busySlots: busySlots.slice(0, 20).map(slot => ({
             start: slot.start?.dateTime || slot.start_time,
-            end: slot.end?.dateTime || slot.end_time,
-            email: slot.profile_email
+            end: slot.end?.dateTime || slot.end_time
+            // NO email - privacy protection
         })),
         suggestions: suggestions.slice(0, 10).map(s => ({
             start: s.start,
