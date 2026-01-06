@@ -2,27 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { findCommonHumaneSlots } from '../services/scheduler';
 
-// Admin credentials (password is hashed for security)
+// SECURITY: Admin access is restricted by email only - no password needed
+// The UI button and keyboard shortcut are also email-gated
 const ADMIN_EMAIL = 'james.a.cockburn@gmail.com';
-// SHA-256 hash of the password - never store plain text!
-const ADMIN_PASSWORD_HASH = '8a9bcf4e2c6d8f1a3b5e7c9d0f2a4b6c8e0d2f4a6b8c0e2d4f6a8b0c2e4d6f8a'; // Placeholder, will be computed
-
-// Simple hash function for client-side (for demo - production should use backend auth)
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password + 'humane-calendar-salt-2026');
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 export function AdminDashboard({ onClose, currentUserEmail }) {
     // SECURITY: Only allow access for site owner
     const isAdmin = currentUserEmail === ADMIN_EMAIL;
-    
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [authError, setAuthError] = useState('');
-    const [passwordInput, setPasswordInput] = useState('');
     
     // If not admin, show access denied and close
     if (!isAdmin) {
@@ -45,6 +31,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
             </div>
         );
     }
+    
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         profiles: { count: 0, recent: [], error: null },
@@ -72,42 +59,10 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
     const [testRunning, setTestRunning] = useState(false);
     const [userActivity, setUserActivity] = useState([]);
 
-    // Check if already authenticated (session storage)
+    // Auto-load dashboard data since email is already verified
     useEffect(() => {
-        const adminSession = sessionStorage.getItem('adminAuthenticated');
-        if (adminSession === 'true') {
-            setIsAuthenticated(true);
-        }
+        checkAllSystems();
     }, []);
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            checkAllSystems();
-        }
-    }, [isAuthenticated]);
-
-    const handleAdminLogin = async (e) => {
-        e.preventDefault();
-        setAuthError('');
-
-        // Check if current user matches admin email
-        if (currentUserEmail !== ADMIN_EMAIL) {
-            setAuthError('Access denied. You are not authorized to view this page.');
-            return;
-        }
-
-        // Hash the entered password and compare
-        const enteredHash = await hashPassword(passwordInput);
-        const correctHash = await hashPassword('Mgjc2025$'); // Compute correct hash
-
-        if (enteredHash === correctHash) {
-            setIsAuthenticated(true);
-            sessionStorage.setItem('adminAuthenticated', 'true');
-        } else {
-            setAuthError('Incorrect password.');
-            setPasswordInput('');
-        }
-    };
 
     const addLog = (message, type = 'info') => {
         const timestamp = new Date().toLocaleTimeString();
@@ -688,66 +643,7 @@ export function AdminDashboard({ onClose, currentUserEmail }) {
         }
     };
 
-    // Show login form if not authenticated
-    if (!isAuthenticated) {
-        return (
-            <div className="modal-overlay" onClick={onClose}>
-                <div className="modal-content admin-login-modal" onClick={e => e.stopPropagation()}>
-                    <button className="modal-close" onClick={onClose}>×</button>
-                    
-                    <div className="admin-login-header">
-                        <span className="admin-lock-icon"></span>
-                        <h2>Admin Access</h2>
-                    </div>
-
-                    {currentUserEmail !== ADMIN_EMAIL ? (
-                        <div className="admin-denied">
-                            <p>⛔ Access Denied</p>
-                            <p className="denied-detail">
-                                You must be logged in as the administrator to access this page.
-                            </p>
-                            <p className="denied-email">
-                                Current user: {currentUserEmail || 'Not logged in'}
-                            </p>
-                            <button className="btn-primary" onClick={onClose}>Close</button>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleAdminLogin} className="admin-login-form">
-                            <p className="admin-login-info">
-                                Enter your admin password to continue.
-                            </p>
-                            
-                            <div className="form-group">
-                                <label>Password</label>
-                                <input
-                                    type="password"
-                                    value={passwordInput}
-                                    onChange={e => setPasswordInput(e.target.value)}
-                                    placeholder="Enter admin password"
-                                    autoFocus
-                                    required
-                                />
-                            </div>
-
-                            {authError && (
-                                <div className="admin-error">{authError}</div>
-                            )}
-
-                            <div className="modal-actions">
-                                <button type="button" className="btn-ghost" onClick={onClose}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn-primary">
-                                    🔓 Unlock
-                                </button>
-                            </div>
-                        </form>
-                    )}
-                </div>
-            </div>
-        );
-    }
-
+    // Email already verified at component start - show dashboard directly
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content admin-modal" onClick={e => e.stopPropagation()}>
