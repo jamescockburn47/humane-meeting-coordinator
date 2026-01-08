@@ -3571,6 +3571,20 @@ label {
   color: var(--text-main);
 }
 
+.security-caveat {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.security-caveat strong {
+  color: #f59e0b;
+}
+
 .privacy-actions {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);

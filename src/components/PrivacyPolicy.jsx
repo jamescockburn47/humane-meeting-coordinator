@@ -89,27 +89,31 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
                 </div>
 
                 <div className="privacy-section">
-                    <h3>🔐 How We Protect Your Data</h3>
+                    <h3>🔐 How We Handle Your Data</h3>
                     <ul className="security-list">
                         <li>
-                            <strong>Encrypted in Transit:</strong> All data transmitted via HTTPS
+                            <strong>HTTPS:</strong> All connections use HTTPS (provided by Vercel)
                         </li>
                         <li>
-                            <strong>Encrypted at Rest:</strong> Database hosted on Supabase (encrypted infrastructure)
+                            <strong>OAuth Login:</strong> We use Google and Microsoft's official login flows — we never see or store your password
                         </li>
                         <li>
-                            <strong>Row-Level Security:</strong> Database policies restrict access to your data
+                            <strong>Database Access Controls:</strong> Row-level security policies restrict who can see what
                         </li>
                         <li>
-                            <strong>No Third-Party Sharing:</strong> We never sell or share your data
+                            <strong>No Third-Party Sharing:</strong> We don't sell or share your data
                         </li>
                         <li>
-                            <strong>Browser-Based Tokens:</strong> Calendar access tokens are stored locally in your browser and can be cleared by logging out
+                            <strong>Browser-Based Tokens:</strong> Calendar access tokens are stored in your browser and cleared when you log out
                         </li>
                         <li>
-                            <strong>Cloud Infrastructure:</strong> Hosted on Vercel and Supabase with industry-standard security practices
+                            <strong>Third-Party Hosting:</strong> Database on Supabase, app on Vercel — their security is their responsibility, not ours
                         </li>
                     </ul>
+                    <p className="security-caveat">
+                        <strong>Honest caveat:</strong> This app was built by a non-developer as a proof of concept. 
+                        It has not been professionally security audited. Please use personal accounts only during beta.
+                    </p>
                 </div>
 
                 <div className="privacy-section">
