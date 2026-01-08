@@ -92,10 +92,10 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
                     <h3>🔐 How We Protect Your Data</h3>
                     <ul className="security-list">
                         <li>
-                            <strong>Encrypted in Transit:</strong> All data transmitted via HTTPS/TLS 1.3
+                            <strong>Encrypted in Transit:</strong> All data transmitted via HTTPS
                         </li>
                         <li>
-                            <strong>Encrypted at Rest:</strong> Database encrypted using AES-256
+                            <strong>Encrypted at Rest:</strong> Database hosted on Supabase (encrypted infrastructure)
                         </li>
                         <li>
                             <strong>Row-Level Security:</strong> Database policies restrict access to your data
@@ -104,10 +104,10 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
                             <strong>No Third-Party Sharing:</strong> We never sell or share your data
                         </li>
                         <li>
-                            <strong>Session-Only Tokens:</strong> Calendar access tokens are never stored permanently
+                            <strong>Browser-Based Tokens:</strong> Calendar access tokens are stored locally in your browser and can be cleared by logging out
                         </li>
                         <li>
-                            <strong>Hosted in EU/US:</strong> Data stored in SOC 2 Type II compliant data centers
+                            <strong>Cloud Infrastructure:</strong> Hosted on Vercel and Supabase with industry-standard security practices
                         </li>
                     </ul>
                 </div>
@@ -115,7 +115,7 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
                 <div className="privacy-section">
                     <h3>Data Retention</h3>
                     <ul className="retention-list">
-                        <li><strong>Availability Cache:</strong> Automatically deleted after 30 days</li>
+                        <li><strong>Availability Cache:</strong> Retained while you're a member of a group; cleared when you leave</li>
                         <li><strong>Profile Data:</strong> Retained until you delete your account</li>
                         <li><strong>Group Membership:</strong> Removed when you leave or group is deleted</li>
                     </ul>
@@ -155,15 +155,15 @@ export function PrivacyPolicy({ onClose, onDeleteData, userEmail, isStandalone =
 
             <div className="privacy-footer">
                 <div className="compliance-badges">
-                    <span className="badge">GDPR Ready</span>
-                    <span className="badge">CCPA Ready</span>
-                    <span className="badge">SOC 2 Infrastructure*</span>
+                    <span className="badge">Privacy Focused</span>
+                    <span className="badge">Minimal Data Collection</span>
+                    <span className="badge">Beta Software</span>
                 </div>
                 <p className="compliance-note">
-                    *Built to meet regulatory standards. Not yet formally certified.
+                    This is beta software. While we follow privacy best practices, we are not yet formally certified for GDPR, CCPA, or other regulatory frameworks. Use personal (not work) accounts during beta.
                 </p>
                 <p className="contact-info">
-                    Questions? Contact: <a href="mailto:privacy@humanecalendar.com">privacy@humanecalendar.com</a>
+                    Questions? Contact: <a href="mailto:humanecalendar@gmail.com">humanecalendar@gmail.com</a>
                 </p>
                 <p className="last-updated">
                     Last updated: January 2026

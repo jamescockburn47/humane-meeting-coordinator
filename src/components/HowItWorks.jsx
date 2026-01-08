@@ -287,10 +287,10 @@ export function HowItWorks({ isStandalone = false, onClose }) {
                     </div>
                     <div className="privacy-point">
                         <div>
-                            <strong>Transient Data</strong>
+                            <strong>Minimal Retention</strong>
                             <p>
                                 We find the match, send the invite, then get out of the way. 
-                                Availability data auto-deletes after 30 days.
+                                You can delete your data at any time from your profile.
                             </p>
                         </div>
                     </div>
