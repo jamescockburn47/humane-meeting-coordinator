@@ -640,23 +640,12 @@ function App() {
     }
   };
 
-  const checkOrganiserAccess = () => {
-    const isOrganiser = localStorage.getItem('isOrganiser');
-    if (isOrganiser === 'true') return true;
-
-    const code = prompt("Enter Organiser Access Code:");
-    if (code === import.meta.env.VITE_ORGANISER_CODE) {
-      localStorage.setItem('isOrganiser', 'true');
-      return true;
-    } else {
-      alert("Incorrect Code. Access Denied.");
-      return false;
-    }
-  };
-
   const handleCreateGroup = async () => {
-    if (!checkOrganiserAccess()) return;
-
+    if (!activeAccount) { 
+      alert("Please sign in to create a group."); 
+      return; 
+    }
+    
     const name = prompt("Group Name:");
     if (!name) return;
     const grp = await createGroup(name, activeAccount.username);
@@ -728,10 +717,6 @@ function App() {
     if (activeAccount.provider === 'guest' && !calendarConnected) {
       alert("To send calendar invites, please connect your Google or Microsoft calendar first.");
       throw new Error("Calendar not connected");
-    }
-    
-    if (!checkOrganiserAccess()) {
-      throw new Error("Not authorized");
     }
 
     try {
